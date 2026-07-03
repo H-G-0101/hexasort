@@ -312,23 +312,44 @@
       if (!child || child._mbKind || !hasMaskChild(child)) return;
       var kind = classify(child);
       if (!kind) return;
-      park(child, kind);            // mesmo tick: nunca renderiza na tela
+      park(child, kind);            // nasce/entra ja estacionado
       setTimeout(function () {      // espera o controller preencher labels
         if (child.isValid && child.activeInHierarchy && !current) show(child, kind);
       }, 60);
     } catch (e) {}
   }
   function installHooks() {
-    if (hooksDone || !window.cc || !cc.Node) return;
+    if (hooksDone || !window.cc || !cc.Node || !cc.director) return;
     hooksDone = true;
-    // 1) novas instancias: addChild
-    var oAdd = cc.Node.prototype.addChild;
-    cc.Node.prototype.addChild = function (child) {
-      var r = oAdd.apply(this, arguments);
-      inspectNew(child);
+
+    // 1) cc.instantiate: o ponto mais cedo possivel — antes de entrar na cena
+    if (cc.instantiate) {
+      var oInst = cc.instantiate;
+      var wrapped = function (o) {
+        var r = oInst.apply(this, arguments);
+        try { if (r instanceof cc.Node) inspectNew(r); } catch (e) {}
+        return r;
+      };
+      for (var k in oInst) wrapped[k] = oInst[k]; // preserva ._clone etc.
+      cc.instantiate = wrapped;
+    }
+    // 2) setParent: cobre addChild E node.parent = x
+    var oSetParent = cc.Node.prototype.setParent;
+    cc.Node.prototype.setParent = function (p) {
+      var r = oSetParent.apply(this, arguments);
+      if (p) {
+        if (!this._mbKind) inspectNew(this);
+        else if (!this._mbShowing) {
+          var n = this, kind = this._mbKind;
+          if (n.x < PARK_X / 2) n.x += PARK_X;
+          setTimeout(function () {
+            if (n.isValid && n.activeInHierarchy && !current) show(n, kind);
+          }, 60);
+        }
+      }
       return r;
     };
-    // 2) reabertura de instancia cacheada: active = true
+    // 3) active=true: reabertura de cacheado OU modal embutido na cena
     var d = Object.getOwnPropertyDescriptor(cc.Node.prototype, "active");
     if (d && d.set) {
       Object.defineProperty(cc.Node.prototype, "active", {
@@ -336,9 +357,11 @@
         get: d.get,
         set: function (v) {
           d.set.call(this, v);
-          if (v && this._mbKind && !this._mbShowing) {
+          if (!v) return;
+          if (!this._mbKind) { inspectNew(this); return; }
+          if (!this._mbShowing) {
             var n = this, kind = this._mbKind;
-            if (n.x < PARK_X / 2) n.x += PARK_X; // garante fora da tela ja
+            if (n.x < PARK_X / 2) n.x += PARK_X;
             setTimeout(function () {
               if (n.isValid && n.activeInHierarchy && !current) show(n, kind);
             }, 60);
@@ -346,7 +369,17 @@
         }
       });
     }
-    console.log(TAG, "hooks instalados (addChild/active)");
+    // 4) enforcement POR FRAME: antes de cada draw, forca estacionamento.
+    //    Mesmo que o tween de abertura reposicione, nenhum frame vai a tela.
+    cc.director.on(cc.Director.EVENT_BEFORE_DRAW, function () {
+      for (var i = parked.length - 1; i >= 0; i--) {
+        var n = parked[i].node;
+        if (!n || !n.isValid) { parked.splice(i, 1); continue; }
+        if (n.x < PARK_X / 2) n.x += PARK_X;
+        if (n.y < PARK_X / 2 && n.y > -PARK_X / 2) { /* y livre */ }
+      }
+    });
+    console.log(TAG, "hooks instalados (instantiate/setParent/active/beforeDraw)");
   }
 
   setInterval(function () {
