@@ -241,8 +241,15 @@
 
     document.getElementById("mbBuy").onclick=function(){
       for (var i=0;i<qty;i++) fireBtn(buy); // cada disparo: -50, push estoque
+      // a compra do jogo arma o uso automaticamente; cancelamos p/ ficar no estoque
+      setTimeout(cancelChoicePanel, 150);
+      setTimeout(cancelChoicePanel, 450);
     };
-    document.getElementById("mbGet").onclick=function(){ fireBtn(get); };
+    document.getElementById("mbGet").onclick=function(){
+      fireBtn(get);
+      setTimeout(cancelChoicePanel, 300);
+      setTimeout(cancelChoicePanel, 900);
+    };
   }
 
   /* ============ SHOP (GetCoin) ============ */
@@ -404,6 +411,39 @@
     + '<path d="M36 30a14 14 0 0 1-24 3" stroke="#28184a" stroke-width="12"/>'
     + '<path d="M36 30a14 14 0 0 1-24 3" stroke="#e91e8c" stroke-width="7"/>'
     + '<path d="M8 42V32h10" stroke="#28184a" stroke-width="7"/><path d="M8 40v-8h8" stroke="#e91e8c" stroke-width="4.5"/></svg>';
+
+
+  function findGameComp() {
+    try {
+      var start = boosterNatives[0] && boosterNatives[0].isValid ? boosterNatives[0].parent : null;
+      var p = start;
+      while (p) {
+        var cs = p._components || [];
+        for (var i = 0; i < cs.length; i++)
+          if (cs[i] && typeof cs[i].hideChoisePanel === "function") return cs[i];
+        p = p.parent;
+      }
+      // fallback: varre a cena
+      var scene = cc.director.getScene(); var out = null;
+      (function w(n) {
+        if (out || !n) return;
+        var cs2 = n._components || [];
+        for (var i = 0; i < cs2.length; i++)
+          if (cs2[i] && typeof cs2[i].hideChoisePanel === "function") { out = cs2[i]; return; }
+        var c = n.children || [];
+        for (var j = 0; j < c.length; j++) w(c[j]);
+      })(scene);
+      return out;
+    } catch (e) { return null; }
+  }
+  function cancelChoicePanel() { // comprar NAO deve armar o uso: cancela o painel
+    try {
+      var g = findGameComp();
+      if (!g) return;
+      g.hideChoisePanel && g.hideChoisePanel();
+      g.switchChoiseUIStatus && g.switchChoiseUIStatus(false);
+    } catch (e) {}
+  }
 
   var bar = document.createElement("div");
   bar.id = "mbBar";
