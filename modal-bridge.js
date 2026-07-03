@@ -340,25 +340,41 @@
   /* ============ badges de booster (contagem no canto do botao) ============ */
   // Conta real: lida do SAVE do jogo (user.get("items")), que persiste no
   // storage da SDK. Enumeramos o storage e achamos o JSON com "items".
-  var saveKey = null;
+  var saveKey = null, dbgLogged = false;
+  function storages() {
+    var list = [];
+    try { if (window.localStorage) list.push(window.localStorage); } catch (e) {}
+    try { if (window.cc && cc.sys && cc.sys.localStorage && cc.sys.localStorage !== window.localStorage) list.push(cc.sys.localStorage); } catch (e) {}
+    return list;
+  }
   function readItems() {
-    try {
-      var st = window.localStorage;
-      if (saveKey) {
-        var v = st.getItem(saveKey);
-        if (v) { var o = JSON.parse(v); if (Array.isArray(o)) return o; }
-        saveKey = null;
-      }
-      // o User salva cada campo em "<prefixo>_<campo>": procurar *_items (array puro)
-      for (var i = 0; i < st.length; i++) {
-        var k = st.key(i); if (!k) continue;
-        if (k.slice(-6) !== "_items") continue;
-        try {
-          var o2 = JSON.parse(st.getItem(k));
-          if (Array.isArray(o2)) { saveKey = k; return o2; }
-        } catch (e) {}
-      }
-    } catch (e) {}
+    var sts = storages();
+    for (var s = 0; s < sts.length; s++) {
+      var st = sts[s];
+      try {
+        if (saveKey) {
+          var v = st.getItem(saveKey);
+          if (v) { var o = JSON.parse(v); if (Array.isArray(o)) return o; }
+        }
+        var n = st.length | 0;
+        for (var i = 0; i < n; i++) {
+          var k = st.key(i); if (!k) continue;
+          if (k.indexOf("items") < 0) continue;
+          try {
+            var o2 = JSON.parse(st.getItem(k));
+            if (Array.isArray(o2)) {
+              if (saveKey !== k) console.log(TAG, "estoque em:", k);
+              saveKey = k; return o2;
+            }
+          } catch (e) {}
+        }
+        if (!dbgLogged) {
+          var keys = []; for (var j = 0; j < n; j++) keys.push(st.key(j));
+          console.log(TAG, "storage#" + s, "chaves:", keys.join(", ") || "(vazio)");
+        }
+      } catch (e) {}
+    }
+    dbgLogged = true;
     return null;
   }
   var ITEM_TYPES = ["clear", "move", "refresh"]; // ordem dos botoes esq->dir
@@ -383,22 +399,20 @@
                y: rect.top + (1 - ny) * rect.height };
     } catch (e) { return null; }
   }
-  function findBoosterButtons(scene) { // botoes = sprites com a textura 63c39b78
+  var btnsLogged = false;
+  function findBoosterButtons(scene) { // assinatura exata: botao com filho "Total"
     var out = [];
     (function w(n) {
-      if (!n || !n.activeInHierarchy) return;
-      if (n.x < PARK_X / 2) { // ignora estacionados
-        var sp = n.getComponent && n.getComponent(cc.Sprite);
-        var sf = sp && sp.spriteFrame, tex = sf && sf.getTexture && sf.getTexture();
-        if (tex && tex.nativeUrl && tex.nativeUrl.indexOf("63c39b78") >= 0) out.push(n);
-        var c = n.children || [];
-        for (var i = 0; i < c.length; i++) w(c[i]);
-      }
+      if (!n || !n.activeInHierarchy || n.x > PARK_X / 2) return;
+      if (n.getChildByName && n.getChildByName("Total")) out.push(n);
+      var c = n.children || [];
+      for (var i = 0; i < c.length; i++) w(c[i]);
     })(scene);
     out.sort(function (a, b) {
       var pa = nodeToCss(a), pb = nodeToCss(b);
       return (pa && pb) ? pa.x - pb.x : 0;
     });
+    if (!btnsLogged && out.length) { btnsLogged = true; console.log(TAG, "botoes booster:", out.length); }
     return out.slice(0, 3);
   }
   function updateBadges(scene) {
