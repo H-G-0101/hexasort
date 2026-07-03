@@ -82,16 +82,16 @@
   + ".mbShopBtn .mbPlay{border-left-color:#5c3d00;border-top-width:7px;border-bottom-width:7px;border-left-width:11px}"
   + ".mbShopBtn.free .mbPlay{border-left-color:#fff}"
   /* badges de contagem de booster */
-  + "#mbBar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:none;gap:18px;z-index:9997;"
+  + "#mbBar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:none;gap:13px;z-index:9997;"
   + "font-family:system-ui,Arial,sans-serif}"
-  + ".mbBoost{position:relative;width:76px;height:78px;border:none;border-radius:22px;cursor:pointer;"
-  + "background:linear-gradient(180deg,#7c4dff,#448aff);box-shadow:0 5px 0 #30267a,0 8px 16px rgba(0,0,0,.25);"
+  + ".mbBoost{position:relative;width:58px;height:60px;border:none;border-radius:17px;cursor:pointer;"
+  + "background:linear-gradient(180deg,#7c4dff,#448aff);box-shadow:0 4px 0 #30267a,0 6px 12px rgba(0,0,0,.25);"
   + "display:flex;align-items:center;justify-content:center;transition:transform .06s}"
-  + ".mbBoost:active{transform:translateY(3px);box-shadow:0 2px 0 #30267a}"
-  + ".mbBoost svg{width:46px;height:46px}"
-  + ".mbBoost .mbBadge{position:absolute;top:-9px;right:-9px;min-width:26px;height:26px;padding:0 7px;"
-  + "border-radius:13px;background:linear-gradient(180deg,#ff6b6b,#e53935);color:#fff;font-size:15px;"
-  + "font-weight:900;line-height:26px;text-align:center;border:2px solid #fff;"
+  + ".mbBoost:active{transform:translateY(2px);box-shadow:0 1px 0 #30267a}"
+  + ".mbBoost img{width:38px;height:38px;object-fit:contain;pointer-events:none}"
+  + ".mbBoost .mbBadge{position:absolute;top:-8px;right:-8px;min-width:22px;height:22px;padding:0 6px;"
+  + "border-radius:11px;background:linear-gradient(180deg,#ff6b6b,#e53935);color:#fff;font-size:13px;"
+  + "font-weight:900;line-height:22px;text-align:center;border:2px solid #fff;"
   + "box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none}"
   + ".mbBoost .mbBadge.zero{background:linear-gradient(180deg,#b6bdcf,#8b93ab)}"
   /* stepper de quantidade */
@@ -398,70 +398,19 @@
     return n;
   }
 
-  // icones do zero (SVG, estilo do kit)
-  var SVG_BOMB = '<svg viewBox="0 0 48 48"><circle cx="23" cy="28" r="14" fill="#e91e8c" stroke="#28184a" stroke-width="3"/>'
-    + '<path d="M13 30a14 14 0 0 0 20 10" fill="none" stroke="#96105a" stroke-width="5" stroke-linecap="round"/>'
-    + '<ellipse cx="17" cy="22" rx="5" ry="4" fill="#fff" opacity=".55"/>'
-    + '<rect x="17" y="9" width="12" height="8" rx="3.5" fill="#ffc93c" stroke="#28184a" stroke-width="3"/>'
-    + '<path d="M27 8c3-4 7-2 8-6" fill="none" stroke="#6b4420" stroke-width="3" stroke-linecap="round"/>'
-    + '<path d="M36 1l1.4 2.8L40 5l-2.6 1.2L36 9l-1.4-2.8L32 5l2.6-1.2z" fill="#ffb300"/></svg>';
-  var SVG_HAND = '<svg viewBox="0 0 48 48"><g stroke="#28184a" stroke-width="3" stroke-linejoin="round">'
-    + '<path d="M20 4c2.6 0 4 1.8 4 4v12l4-2c6-3 10 1 8 5l-5 10c-1.6 3-4 5-8 5h-4c-5 0-9-4-9-9v-7c0-3 2-4.6 4-4.6 1 0 2 .3 2 .3V8c0-2.2 1.4-4 4-4z" fill="#fff6e1"/>'
-    + '<path d="M15 34c0 4 3 7 7 7" fill="none" stroke="#e0c9a0" stroke-width="3"/></g>'
-    + '<circle cx="31" cy="38" r="6.5" fill="#e91e8c" stroke="#28184a" stroke-width="3"/>'
-    + '<circle cx="31" cy="38" r="2.6" fill="#ff9ecf"/></svg>';
-  var SVG_CYCLE = '<svg viewBox="0 0 48 48" fill="none" stroke-linecap="round">'
-    + '<path d="M12 18a14 14 0 0 1 24-3" stroke="#28184a" stroke-width="12"/>'
-    + '<path d="M12 18a14 14 0 0 1 24-3" stroke="#ffc93c" stroke-width="7"/>'
-    + '<path d="M40 6v10h-10" stroke="#28184a" stroke-width="7"/><path d="M40 8v8h-8" stroke="#ffc93c" stroke-width="4.5"/>'
-    + '<path d="M36 30a14 14 0 0 1-24 3" stroke="#28184a" stroke-width="12"/>'
-    + '<path d="M36 30a14 14 0 0 1-24 3" stroke="#e91e8c" stroke-width="7"/>'
-    + '<path d="M8 42V32h10" stroke="#28184a" stroke-width="7"/><path d="M8 40v-8h8" stroke="#e91e8c" stroke-width="4.5"/></svg>';
-
-
-  function findGameComp() {
-    try {
-      var start = boosterNatives[0] && boosterNatives[0].isValid ? boosterNatives[0].parent : null;
-      var p = start;
-      while (p) {
-        var cs = p._components || [];
-        for (var i = 0; i < cs.length; i++)
-          if (cs[i] && typeof cs[i].hideChoisePanel === "function") return cs[i];
-        p = p.parent;
-      }
-      var scene = cc.director.getScene(); var out = null;
-      (function w(n) {
-        if (out || !n) return;
-        var cs2 = n._components || [];
-        for (var i = 0; i < cs2.length; i++)
-          if (cs2[i] && typeof cs2[i].hideChoisePanel === "function") { out = cs2[i]; return; }
-        var c = n.children || [];
-        for (var j = 0; j < c.length; j++) w(c[j]);
-      })(scene);
-      return out;
-    } catch (e) { return null; }
-  }
-  function cancelChoicePanel(type) { // desarma o uso auto pos-compra (clear/move)
-    try {
-      var g = findGameComp();
-      if (!g) { console.warn(TAG, "Game comp nao achado p/ cancelar"); return; }
-      g.hideChoisePanel(type); // com o tipo: roda func_cancelClear/Move + reativa botoes
-      console.log(TAG, "uso automatico cancelado (", type, ")");
-    } catch (e) { console.warn(TAG, "cancel err", e); }
-  }
-  function getItemComp(root) { // componente GetItem do modal (tem _data e clickBuyHandle)
-    var cs = (root && root._components) || [];
-    for (var i = 0; i < cs.length; i++)
-      if (cs[i] && cs[i]._data && typeof cs[i].clickBuyHandle === "function") return cs[i];
-    return null;
-  }
+  // icones: os PNGs redesenhados do proprio projeto (a prova de falha de render)
+  var ICON_IMGS = [
+    "assets/local/native/0f/0f5d5f39-5d1c-4510-9446-c0d6068e9079.84b5f.png",   // bomba (clear)
+    "assets/local/native/66/6633f875-0ee2-4015-aaad-5a46d36c9956.0377a.png",   // mao (move)
+    "assets/local/native/23/23ec48d8-ac69-4ad3-a835-09429843f849.9d9c7.png"    // ciclo (refresh)
+  ];
 
   var bar = document.createElement("div");
   bar.id = "mbBar";
-  [SVG_BOMB, SVG_HAND, SVG_CYCLE].forEach(function (svg, i) {
+  ICON_IMGS.forEach(function (src, i) {
     var b = document.createElement("button");
     b.className = "mbBoost";
-    b.innerHTML = svg + '<span class="mbBadge zero">0</span>';
+    b.innerHTML = '<img src="' + src + '" alt=""><span class="mbBadge zero">0</span>';
     b.onclick = function () { if (boosterNatives[i]) fireBtn(boosterNatives[i]); };
     bar.appendChild(b);
   });
