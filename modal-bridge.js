@@ -487,11 +487,23 @@
     console.log(TAG, "barra DOM ativa; nativos Clear/Move/Refresh estacionados");
     return true;
   }
+  var barState = "";
+  function barLog(s) { if (s !== barState) { barState = s; console.log(TAG, "barra:", s); } }
   function updateBar(scene) {
-    var alive = boosterNatives[0] && boosterNatives[0].isValid && boosterNatives[0].activeInHierarchy;
-    if (!alive) { boosterNatives = [null, null, null]; alive = captureNatives(scene); }
-    if (!alive || overlay.style.display === "flex") { bar.style.display = "none"; return; }
+    var b0 = boosterNatives[0];
+    if (!b0 || !b0.isValid) {
+      boosterNatives = [null, null, null];
+      if (!captureNatives(scene)) { bar.style.display = "none"; barLog("oculta (botoes nativos nao encontrados na cena)"); return; }
+      b0 = boosterNatives[0];
+    }
+    if (!b0.activeInHierarchy) {
+      bar.style.display = "none";
+      var why = !b0.active ? "botao .active=false (modo de uso/painel do jogo)" : "ancestral inativo";
+      barLog("oculta (" + why + ")");
+      return;
+    }
     bar.style.display = "flex";
+    barLog("visivel");
     var items = readItems();
     var els = bar.querySelectorAll(".mbBadge");
     for (var i = 0; i < 3; i++) {
