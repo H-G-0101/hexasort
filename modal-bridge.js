@@ -80,20 +80,7 @@
   + ".mbShopBtn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.18)}"
   + ".mbShopBtn.free{background:linear-gradient(180deg,#6fdc4f,#3cb527);color:#fff}"
   + ".mbShopBtn .mbPlay{border-left-color:#5c3d00;border-top-width:7px;border-bottom-width:7px;border-left-width:11px}"
-  + ".mbShopBtn.free .mbPlay{border-left-color:#fff}"
-  /* badges de contagem de booster */
-  + ".mbBadge{position:fixed;z-index:9998;min-width:26px;height:26px;padding:0 7px;border-radius:13px;"
-  + "background:linear-gradient(180deg,#ff6b6b,#e53935);color:#fff;font-family:system-ui,Arial,sans-serif;"
-  + "font-size:15px;font-weight:900;line-height:26px;text-align:center;pointer-events:none;"
-  + "border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transform:translate(-50%,-50%)}"
-  + ".mbBadge.zero{background:linear-gradient(180deg,#b6bdcf,#8b93ab)}"
-  /* stepper de quantidade */
-  + "#mbQty{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 14px}"
-  + "#mbQty button{width:44px;height:44px;border:none;border-radius:50%;font-size:24px;font-weight:900;color:#fff;"
-  + "background:linear-gradient(180deg,#7c4dff,#448aff);cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.2)}"
-  + "#mbQty button:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.2)}"
-  + "#mbQty span{min-width:56px;text-align:center;font-size:26px;font-weight:900;color:#2d3348}"
-  + "#mbQty small{display:block;font-size:12px;color:#8b93ab;font-weight:700}";
+  + ".mbShopBtn.free .mbPlay{border-left-color:#fff}";
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   var overlay = document.createElement("div");
@@ -186,11 +173,7 @@
     var title=findDesc(root,"Title"), des=findDesc(root,"Des");
     var buy=findDesc(root,"Buy",cc.Button)||findDesc(root,"Coin",cc.Button);
     var get=findDesc(root,"Get",cc.Button)||findDesc(root,"GetItem",cc.Button);
-    // o icone REAL e Content/Icon (filho direto); "Frames" guarda os 3 frames e confundia o findDesc
-    var content=findDesc(root,"Content");
-    var icon=null;
-    if(content){ var cs=content.children||[]; for(var ci=0;ci<cs.length;ci++) if(cs[ci].name==="Icon"){icon=cs[ci];break;} }
-    if(!icon) icon=findDesc(root,"Icon");
+    var icon=findDesc(root,"Icon");
 
     document.getElementById("mbHead").textContent = labelText(title) || "Booster";
     var body=document.getElementById("mbBody");
@@ -213,28 +196,10 @@
         iconDiv.style.width=w+"px"; iconDiv.style.height=h+"px";
         iconDiv.style.background="url('"+tex.nativeUrl+"') no-repeat -"+r.x+"px -"+r.y+"px";
         iconDiv.style.transform="scale("+sc+")"+(rot?" rotate(-90deg)":"");
-      } else { iconDiv.textContent="\uD83D\uDCA3"; iconDiv.style.fontSize="84px"; }
-    } catch(e){ iconDiv.textContent="\uD83D\uDCA3"; iconDiv.style.fontSize="84px"; }
+      } else { iconDiv.textContent="\uD83D\uDD28"; iconDiv.style.fontSize="84px"; }
+    } catch(e){ iconDiv.textContent="\uD83D\uDD28"; iconDiv.style.fontSize="84px"; }
 
-    // stepper de quantidade (compra multipla: dispara o Buy nativo N vezes
-    // no mesmo tick — N pushes no estoque antes do popup fechar)
-    var qty = 1, PRICE = 50;
-    var qtyDiv = document.createElement("div");
-    qtyDiv.id = "mbQty";
-    qtyDiv.innerHTML = '<button id="mbQm">\u2212</button><span><b id="mbQn">1</b><small id="mbQp">50</small></span><button id="mbQp2">+</button>';
-    body.insertBefore(qtyDiv, document.getElementById("mbBtns"));
-    function syncQty(){
-      document.getElementById("mbQn").textContent = qty;
-      document.getElementById("mbQp").textContent = (qty*PRICE) + " \uD83D\uDC8E";
-      document.getElementById("mbBuyTxt").textContent = String(qty*PRICE);
-    }
-    document.getElementById("mbQm").onclick = function(){ if(qty>1){qty--; syncQty();} };
-    document.getElementById("mbQp2").onclick = function(){ if(qty<9){qty++; syncQty();} };
-    syncQty();
-
-    document.getElementById("mbBuy").onclick=function(){
-      for (var i=0;i<qty;i++) fireBtn(buy); // cada disparo: -50, push estoque
-    };
+    document.getElementById("mbBuy").onclick=function(){ fireBtn(buy); };
     document.getElementById("mbGet").onclick=function(){ fireBtn(get); };
   }
 
@@ -341,166 +306,29 @@
       console.log(TAG, err ? "preload com erros (ok, parcial)" : "preload completo — modais abrem sem loading");
     });
   }
-  /* ============ badges de booster (contagem no canto do botao) ============ */
-  // Conta real: lida do SAVE do jogo (user.get("items")), que persiste no
-  // storage da SDK. Enumeramos o storage e achamos o JSON com "items".
-  var saveKey = null, dbgLogged = false;
-  function storages() {
-    var list = [];
-    try { if (window.localStorage) list.push(window.localStorage); } catch (e) {}
-    try { if (window.cc && cc.sys && cc.sys.localStorage && cc.sys.localStorage !== window.localStorage) list.push(cc.sys.localStorage); } catch (e) {}
-    return list;
-  }
-  function readItems() {
-    var sts = storages();
-    for (var s = 0; s < sts.length; s++) {
-      var st = sts[s];
-      try {
-        if (saveKey) {
-          var v = st.getItem(saveKey);
-          if (v) { var o = JSON.parse(v); if (Array.isArray(o)) return o; }
-        }
-        var n = st.length | 0;
-        for (var i = 0; i < n; i++) {
-          var k = st.key(i); if (!k) continue;
-          if (k.indexOf("items") < 0) continue;
-          try {
-            var o2 = JSON.parse(st.getItem(k));
-            if (Array.isArray(o2)) {
-              if (saveKey !== k) console.log(TAG, "estoque em:", k);
-              saveKey = k; return o2;
-            }
-          } catch (e) {}
-        }
-        if (!dbgLogged) {
-          var keys = []; for (var j = 0; j < n; j++) keys.push(st.key(j));
-          console.log(TAG, "storage#" + s, "chaves:", keys.join(", ") || "(vazio)");
-        }
-      } catch (e) {}
-    }
-    dbgLogged = true;
-    return null;
-  }
-  var ITEM_TYPES = ["clear", "move", "refresh"]; // ordem dos botoes esq->dir
-  function itemCount(items, idx) {
-    if (!items || !Array.isArray(items)) return 0;
-    var t = ITEM_TYPES[idx], n = 0;
-    for (var i = 0; i < items.length; i++) if (items[i] && items[i].type === t) n++;
-    return n;
-  }
-  var badgeEls = [];
-  function nodeToCss(node) { // canto sup. direito do node -> coordenadas CSS
-    try {
-      // UI de Canvas: coords de mundo ~ resolucao de design visivel
-      var wp = node.convertToWorldSpaceAR(cc.v2(node.width * (1 - node.anchorX), node.height * (1 - node.anchorY)));
-      var vis = cc.view.getVisibleSize();
-      var org = cc.view.getVisibleOrigin();
-      var rect = cc.game.canvas.getBoundingClientRect();
-      var nx = (wp.x - org.x) / vis.width;
-      var ny = (wp.y - org.y) / vis.height;
-      if (nx < -0.2 || nx > 1.2 || ny < -0.2 || ny > 1.2) return null;
-      return { x: rect.left + nx * rect.width,
-               y: rect.top + (1 - ny) * rect.height };
-    } catch (e) { return null; }
-  }
-  var btnsLogged = false;
-  function findBoosterButtons(scene) { // botoes reais = no com filho direto "Total"
-    var out = [];
-    (function w(n) {
-      if (!n || !n.activeInHierarchy || n.x > PARK_X / 2) return;
-      if (n.getChildByName && n.getChildByName("Total")) out.push(n);
-      var c = n.children || [];
-      for (var i = 0; i < c.length; i++) w(c[i]);
-    })(scene);
-    out.sort(function (a, b) { return a.getPosition && b.getPosition ? (a.convertToWorldSpaceAR(cc.v2(0,0)).x - b.convertToWorldSpaceAR(cc.v2(0,0)).x) : 0; });
-    out = out.slice(0, 3);
-    if (!btnsLogged && out.length) {
-      btnsLogged = true;
-      try {
-        var vis = cc.view.getVisibleSize(), org = cc.view.getVisibleOrigin();
-        var cs = cc.view.getCanvasSize(), rect = cc.game.canvas.getBoundingClientRect();
-        console.log(TAG, "DIAG view: vis=", vis.width|0, "x", vis.height|0,
-          " org=", org.x|0, ",", org.y|0, " canvasPx=", cs.width|0, "x", cs.height|0,
-          " rectCss=", rect.width|0, "x", rect.height|0, " scaleX=", cc.view.getScaleX());
-        for (var s = 0; s < out.length; s++) {
-          var wp = out[s].convertToWorldSpaceAR(cc.v2(0, 0));
-          console.log(TAG, "DIAG btn", s, out[s].name, " world=", wp.x|0, ",", wp.y|0,
-            " size=", out[s].width|0, "x", out[s].height|0, " scale=", out[s].scaleX);
-        }
-      } catch (e) { console.warn(TAG, "diag err", e); }
-    }
-    return out;
-  }
-  function updateBadges(scene) {
-    var btns = findBoosterButtons(scene);
-    var items = readItems();
-    for (var i = 0; i < 3; i++) {
-      var el = badgeEls[i];
-      if (!el) {
-        el = document.createElement("div"); el.className = "mbBadge";
-        document.body.appendChild(el); badgeEls[i] = el;
-      }
-      var n = btns[i];
-      // esconde o badge nativo "Total" (fica so o nosso)
-      try {
-        var holder = n && (n.getChildByName("Total") ? n : (n.parent && n.parent.getChildByName("Total") ? n.parent : null));
-        if (holder) holder.getChildByName("Total").opacity = 0;
-      } catch (e) {}
-      var p = n && nodeToCss(n);
-      if (!n || !p || overlay.style.display === "flex") { el.style.display = "none"; continue; }
-      var cnt = itemCount(items, i);
-      el.textContent = String(cnt);
-      el.classList.toggle("zero", cnt === 0);
-      el.style.display = "block";
-      el.style.left = p.x + "px";
-      el.style.top = p.y + "px";
-    }
-  }
-
   var hooksDone = false;
   function inspectNew(child) {
     try {
       if (!child || child._mbKind || !hasMaskChild(child)) return;
       var kind = classify(child);
       if (!kind) return;
-      park(child, kind);            // nasce/entra ja estacionado
+      park(child, kind);            // mesmo tick: nunca renderiza na tela
       setTimeout(function () {      // espera o controller preencher labels
         if (child.isValid && child.activeInHierarchy && !current) show(child, kind);
       }, 60);
     } catch (e) {}
   }
   function installHooks() {
-    if (hooksDone || !window.cc || !cc.Node || !cc.director) return;
+    if (hooksDone || !window.cc || !cc.Node) return;
     hooksDone = true;
-
-    // 1) cc.instantiate: o ponto mais cedo possivel — antes de entrar na cena
-    if (cc.instantiate) {
-      var oInst = cc.instantiate;
-      var wrapped = function (o) {
-        var r = oInst.apply(this, arguments);
-        try { if (r instanceof cc.Node) inspectNew(r); } catch (e) {}
-        return r;
-      };
-      for (var k in oInst) wrapped[k] = oInst[k]; // preserva ._clone etc.
-      cc.instantiate = wrapped;
-    }
-    // 2) setParent: cobre addChild E node.parent = x
-    var oSetParent = cc.Node.prototype.setParent;
-    cc.Node.prototype.setParent = function (p) {
-      var r = oSetParent.apply(this, arguments);
-      if (p) {
-        if (!this._mbKind) inspectNew(this);
-        else if (!this._mbShowing) {
-          var n = this, kind = this._mbKind;
-          if (n.x < PARK_X / 2) n.x += PARK_X;
-          setTimeout(function () {
-            if (n.isValid && n.activeInHierarchy && !current) show(n, kind);
-          }, 60);
-        }
-      }
+    // 1) novas instancias: addChild
+    var oAdd = cc.Node.prototype.addChild;
+    cc.Node.prototype.addChild = function (child) {
+      var r = oAdd.apply(this, arguments);
+      inspectNew(child);
       return r;
     };
-    // 3) active=true: reabertura de cacheado OU modal embutido na cena
+    // 2) reabertura de instancia cacheada: active = true
     var d = Object.getOwnPropertyDescriptor(cc.Node.prototype, "active");
     if (d && d.set) {
       Object.defineProperty(cc.Node.prototype, "active", {
@@ -508,11 +336,9 @@
         get: d.get,
         set: function (v) {
           d.set.call(this, v);
-          if (!v) return;
-          if (!this._mbKind) { inspectNew(this); return; }
-          if (!this._mbShowing) {
+          if (v && this._mbKind && !this._mbShowing) {
             var n = this, kind = this._mbKind;
-            if (n.x < PARK_X / 2) n.x += PARK_X;
+            if (n.x < PARK_X / 2) n.x += PARK_X; // garante fora da tela ja
             setTimeout(function () {
               if (n.isValid && n.activeInHierarchy && !current) show(n, kind);
             }, 60);
@@ -520,17 +346,7 @@
         }
       });
     }
-    // 4) enforcement POR FRAME: antes de cada draw, forca estacionamento.
-    //    Mesmo que o tween de abertura reposicione, nenhum frame vai a tela.
-    cc.director.on(cc.Director.EVENT_BEFORE_DRAW, function () {
-      for (var i = parked.length - 1; i >= 0; i--) {
-        var n = parked[i].node;
-        if (!n || !n.isValid) { parked.splice(i, 1); continue; }
-        if (n.x < PARK_X / 2) n.x += PARK_X;
-        if (n.y < PARK_X / 2 && n.y > -PARK_X / 2) { /* y livre */ }
-      }
-    });
-    console.log(TAG, "hooks instalados (instantiate/setParent/active/beforeDraw)");
+    console.log(TAG, "hooks instalados (addChild/active)");
   }
 
   setInterval(function () {
@@ -539,7 +355,6 @@
       installHooks();
       applyAudio();
       var scene = cc.director.getScene(); if (!scene) return;
-      updateBadges(scene);
       // dispara o preload ~2.5s depois do jogo subir (nao concorre com o boot)
       if (!bootSeenAt) bootSeenAt = Date.now();
       else if (preloadState === 0 && Date.now() - bootSeenAt > 2500) preloadAll();
