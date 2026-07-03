@@ -346,15 +346,16 @@
       var st = window.localStorage;
       if (saveKey) {
         var v = st.getItem(saveKey);
-        if (v) { var o = JSON.parse(v); if (o && o.items) return o.items; }
+        if (v) { var o = JSON.parse(v); if (Array.isArray(o)) return o; }
         saveKey = null;
       }
+      // o User salva cada campo em "<prefixo>_<campo>": procurar *_items (array puro)
       for (var i = 0; i < st.length; i++) {
         var k = st.key(i); if (!k) continue;
-        var raw = st.getItem(k); if (!raw || raw[0] !== "{") continue;
+        if (k.slice(-6) !== "_items") continue;
         try {
-          var o2 = JSON.parse(raw);
-          if (o2 && typeof o2 === "object" && o2.items) { saveKey = k; return o2.items; }
+          var o2 = JSON.parse(st.getItem(k));
+          if (Array.isArray(o2)) { saveKey = k; return o2; }
         } catch (e) {}
       }
     } catch (e) {}
@@ -370,13 +371,16 @@
   var badgeEls = [];
   function nodeToCss(node) { // canto sup. direito do node -> coordenadas CSS
     try {
-      var cam = cc.Camera.main || (cc.Camera.cameras && cc.Camera.cameras[0]);
+      // UI de Canvas: coords de mundo ~ resolucao de design visivel
       var wp = node.convertToWorldSpaceAR(cc.v2(node.width * (1 - node.anchorX), node.height * (1 - node.anchorY)));
-      var sp = cam ? cam.getWorldToScreenPoint(wp) : wp;
+      var vis = cc.view.getVisibleSize();
+      var org = cc.view.getVisibleOrigin();
       var rect = cc.game.canvas.getBoundingClientRect();
-      var cs = cc.view.getCanvasSize();
-      return { x: rect.left + sp.x / cs.width * rect.width,
-               y: rect.top + (1 - sp.y / cs.height) * rect.height };
+      var nx = (wp.x - org.x) / vis.width;
+      var ny = (wp.y - org.y) / vis.height;
+      if (nx < -0.2 || nx > 1.2 || ny < -0.2 || ny > 1.2) return null;
+      return { x: rect.left + nx * rect.width,
+               y: rect.top + (1 - ny) * rect.height };
     } catch (e) { return null; }
   }
   function findBoosterButtons(scene) { // botoes = sprites com a textura 63c39b78
@@ -407,6 +411,11 @@
         document.body.appendChild(el); badgeEls[i] = el;
       }
       var n = btns[i];
+      // esconde o badge nativo "Total" (fica so o nosso)
+      try {
+        var holder = n && (n.getChildByName("Total") ? n : (n.parent && n.parent.getChildByName("Total") ? n.parent : null));
+        if (holder) holder.getChildByName("Total").opacity = 0;
+      } catch (e) {}
       var p = n && nodeToCss(n);
       if (!n || !p || overlay.style.display === "flex") { el.style.display = "none"; continue; }
       var cnt = itemCount(items, i);
