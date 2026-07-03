@@ -186,7 +186,11 @@
     var title=findDesc(root,"Title"), des=findDesc(root,"Des");
     var buy=findDesc(root,"Buy",cc.Button)||findDesc(root,"Coin",cc.Button);
     var get=findDesc(root,"Get",cc.Button)||findDesc(root,"GetItem",cc.Button);
-    var icon=findDesc(root,"Icon");
+    // o icone REAL e Content/Icon (filho direto); "Frames" guarda os 3 frames e confundia o findDesc
+    var content=findDesc(root,"Content");
+    var icon=null;
+    if(content){ var cs=content.children||[]; for(var ci=0;ci<cs.length;ci++) if(cs[ci].name==="Icon"){icon=cs[ci];break;} }
+    if(!icon) icon=findDesc(root,"Icon");
 
     document.getElementById("mbHead").textContent = labelText(title) || "Booster";
     var body=document.getElementById("mbBody");
@@ -400,42 +404,32 @@
     } catch (e) { return null; }
   }
   var btnsLogged = false;
-  var ICON_TEX = ["0f5d5f39", "8f4d72d5",           // bomba (clear)
-                  "6633f875", "e62e136f",           // mao (move)
-                  "23ec48d8", "9b40d5a8"];          // ciclo (refresh)
-  function iconSlot(url) {
-    for (var i = 0; i < ICON_TEX.length; i++) if (url.indexOf(ICON_TEX[i]) >= 0) return (i / 2) | 0;
-    return -1;
-  }
-  function findBoosterButtons(scene) {
-    // ancora no SPRITE DO ICONE visivel e sobe ate o ancestral com filho "Total"
-    var slots = [null, null, null];
+  function findBoosterButtons(scene) { // botoes reais = no com filho direto "Total"
+    var out = [];
     (function w(n) {
       if (!n || !n.activeInHierarchy || n.x > PARK_X / 2) return;
-      var sp = n.getComponent && n.getComponent(cc.Sprite);
-      var sf = sp && sp.spriteFrame, tex = sf && sf.getTexture && sf.getTexture();
-      if (tex && tex.nativeUrl) {
-        var slot = iconSlot(tex.nativeUrl);
-        if (slot >= 0) {
-          var p = n, hops = 0, owner = null;
-          while (p && hops < 4) {
-            if (p.getChildByName && p.getChildByName("Total")) { owner = p; break; }
-            p = p.parent; hops++;
-          }
-          if (owner && !slots[slot]) slots[slot] = owner;
-        }
-      }
+      if (n.getChildByName && n.getChildByName("Total")) out.push(n);
       var c = n.children || [];
       for (var i = 0; i < c.length; i++) w(c[i]);
     })(scene);
-    if (!btnsLogged && (slots[0] || slots[1] || slots[2])) {
+    out.sort(function (a, b) { return a.getPosition && b.getPosition ? (a.convertToWorldSpaceAR(cc.v2(0,0)).x - b.convertToWorldSpaceAR(cc.v2(0,0)).x) : 0; });
+    out = out.slice(0, 3);
+    if (!btnsLogged && out.length) {
       btnsLogged = true;
-      for (var s = 0; s < 3; s++) {
-        var q = slots[s] && nodeToCss(slots[s]);
-        console.log(TAG, "slot", s, slots[s] ? slots[s].name : "-", q ? (q.x | 0) + "," + (q.y | 0) : "-");
-      }
+      try {
+        var vis = cc.view.getVisibleSize(), org = cc.view.getVisibleOrigin();
+        var cs = cc.view.getCanvasSize(), rect = cc.game.canvas.getBoundingClientRect();
+        console.log(TAG, "DIAG view: vis=", vis.width|0, "x", vis.height|0,
+          " org=", org.x|0, ",", org.y|0, " canvasPx=", cs.width|0, "x", cs.height|0,
+          " rectCss=", rect.width|0, "x", rect.height|0, " scaleX=", cc.view.getScaleX());
+        for (var s = 0; s < out.length; s++) {
+          var wp = out[s].convertToWorldSpaceAR(cc.v2(0, 0));
+          console.log(TAG, "DIAG btn", s, out[s].name, " world=", wp.x|0, ",", wp.y|0,
+            " size=", out[s].width|0, "x", out[s].height|0, " scale=", out[s].scaleX);
+        }
+      } catch (e) { console.warn(TAG, "diag err", e); }
     }
-    return slots;
+    return out;
   }
   function updateBadges(scene) {
     var btns = findBoosterButtons(scene);
