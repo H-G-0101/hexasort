@@ -224,25 +224,70 @@
     return null;
   }
 
+  /* ============ hooks: intercepta ANTES do primeiro render ============ */
+  var hooksDone = false;
+  function inspectNew(child) {
+    try {
+      if (!child || child._mbKind || !hasMaskChild(child)) return;
+      var kind = classify(child);
+      if (!kind) return;
+      park(child, kind);            // mesmo tick: nunca renderiza na tela
+      setTimeout(function () {      // espera o controller preencher labels
+        if (child.isValid && child.activeInHierarchy && !current) show(child, kind);
+      }, 60);
+    } catch (e) {}
+  }
+  function installHooks() {
+    if (hooksDone || !window.cc || !cc.Node) return;
+    hooksDone = true;
+    // 1) novas instancias: addChild
+    var oAdd = cc.Node.prototype.addChild;
+    cc.Node.prototype.addChild = function (child) {
+      var r = oAdd.apply(this, arguments);
+      inspectNew(child);
+      return r;
+    };
+    // 2) reabertura de instancia cacheada: active = true
+    var d = Object.getOwnPropertyDescriptor(cc.Node.prototype, "active");
+    if (d && d.set) {
+      Object.defineProperty(cc.Node.prototype, "active", {
+        configurable: true,
+        get: d.get,
+        set: function (v) {
+          d.set.call(this, v);
+          if (v && this._mbKind && !this._mbShowing) {
+            var n = this, kind = this._mbKind;
+            if (n.x < PARK_X / 2) n.x += PARK_X; // garante fora da tela ja
+            setTimeout(function () {
+              if (n.isValid && n.activeInHierarchy && !current) show(n, kind);
+            }, 60);
+          }
+        }
+      });
+    }
+    console.log(TAG, "hooks instalados (addChild/active)");
+  }
+
   setInterval(function () {
     try {
       if (!window.cc || !cc.director || !cc.director.getScene) return;
+      installHooks();
       applyAudio();
       var scene = cc.director.getScene(); if (!scene) return;
 
-      // modal DOM aberto: fecha se o nativo sumiu
+      // modal DOM aberto: fecha se o nativo sumiu; mantem estacionado
       if (current) {
         var r = current.root;
-        if (!r || !r.isValid || !r.activeInHierarchy) hideDom();
+        if (!r || !r.isValid || !r.activeInHierarchy) { hideDom(); return; }
+        if (r.x < PARK_X / 2) r.x += PARK_X; // reancora se o jogo reposicionar
         return;
       }
-      // reabertura de instancias cacheadas
+      // fallback (caso os hooks percam algo)
       for (var i = parked.length - 1; i >= 0; i--) {
         var p = parked[i];
         if (!p.node || !p.node.isValid) { parked.splice(i,1); continue; }
         if (p.node.activeInHierarchy && !p.node._mbShowing) { show(p.node, p.kind); return; }
       }
-      // novas instancias
       (function walk(n) {
         if (!n || !n.activeInHierarchy || current) return;
         if (!n._mbKind && hasMaskChild(n)) {
