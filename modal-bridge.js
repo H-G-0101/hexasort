@@ -62,7 +62,23 @@
   + ".mbSw.on{background:linear-gradient(180deg,#6fdc4f,#3cb527)}"
   + ".mbSw i{position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:#fff;"
   + "box-shadow:0 2px 5px rgba(0,0,0,.25);transition:left .18s}"
-  + ".mbSw.on i{left:33px}";
+  + ".mbSw.on i{left:33px}"
+  /* shop */
+  + ".mbShopRow{display:flex;align-items:center;gap:12px;padding:12px 10px;margin-bottom:12px;"
+  + "background:linear-gradient(180deg,#f8faff,#eef2fb);border:2px solid #e3e9f6;border-radius:18px;"
+  + "box-shadow:0 3px 8px rgba(30,60,120,.08)}"
+  + ".mbShopRow:last-child{margin-bottom:0}"
+  + ".mbShopIco{width:64px;height:64px;display:flex;align-items:center;justify-content:center;flex:none;"
+  + "background:radial-gradient(circle at 50% 35%,#fff,#e8eefc);border-radius:14px;overflow:hidden}"
+  + ".mbShopTxt{flex:1;font-size:17px;font-weight:800;color:#2d3348;line-height:1.25}"
+  + ".mbShopTxt small{display:block;font-size:13px;color:#8b93ab;font-weight:700}"
+  + ".mbShopBtn{border:none;border-radius:14px;padding:12px 16px;font-size:16px;font-weight:800;color:#5c3d00;"
+  + "cursor:pointer;display:flex;align-items:center;gap:7px;background:linear-gradient(180deg,#ffd54f,#fb9e00);"
+  + "box-shadow:0 4px 0 rgba(0,0,0,.18),0 6px 12px rgba(0,0,0,.12);transition:transform .06s}"
+  + ".mbShopBtn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.18)}"
+  + ".mbShopBtn.free{background:linear-gradient(180deg,#6fdc4f,#3cb527);color:#fff}"
+  + ".mbShopBtn .mbPlay{border-left-color:#5c3d00;border-top-width:7px;border-bottom-width:7px;border-left-width:11px}"
+  + ".mbShopBtn.free .mbPlay{border-left-color:#fff}";
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   var overlay = document.createElement("div");
@@ -185,9 +201,56 @@
     document.getElementById("mbGet").onclick=function(){ fireBtn(get); };
   }
 
+  /* ============ SHOP (GetCoin) ============ */
+  function cssSpriteInto(div, node, box) { // recorta sprite real p/ CSS
+    try {
+      var sp = node && node.getComponent(cc.Sprite), sf = sp && sp.spriteFrame, tex = sf && sf.getTexture();
+      if (tex && tex.nativeUrl) {
+        var r = sf.getRect(), rot = sf.isRotated();
+        var w = rot ? r.height : r.width, h = rot ? r.width : r.height;
+        var sc = Math.min(box / w, box / h);
+        div.style.width = w + "px"; div.style.height = h + "px";
+        div.style.background = "url('" + tex.nativeUrl + "') no-repeat -" + r.x + "px -" + r.y + "px";
+        div.style.transform = "scale(" + sc + ")" + (rot ? " rotate(-90deg)" : "");
+        div.style.transformOrigin = "center";
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+  function renderShop(root) {
+    document.getElementById("mbHead").textContent = labelText(findDesc(root, "Title")) || "Shop";
+    var body = document.getElementById("mbBody"); body.innerHTML = "";
+    [["FreeContent", true], ["FirstContent", false], ["SecondContent", false]].forEach(function (cfg) {
+      var row = findDesc(root, cfg[0]); if (!row || !row.activeInHierarchy) return;
+      var buy = findDesc(row, "Buy", cc.Button);
+      var icon = findDesc(row, "Icon");
+      var texts = [];
+      (function w(n){ var lb=n.getComponent&&n.getComponent(cc.Label);
+        if(lb&&lb.string&&(!buy||!isDescOf(n,buy))) texts.push(lb.string.trim());
+        (n.children||[]).forEach(w); })(row);
+      var btnTxt = buy ? (labelText(buy).trim() || "Get") : "Get";
+      var main = texts.length ? texts[0] : "Coins";
+      var sub  = texts.slice(1).join(" \u00b7 ");
+
+      var el = document.createElement("div"); el.className = "mbShopRow";
+      el.innerHTML = '<div class="mbShopIco"><div></div></div>' +
+        '<div class="mbShopTxt">' + main + (sub ? '<small>' + sub + '</small>' : '') + '</div>' +
+        '<button class="mbShopBtn' + (cfg[1] ? ' free' : '') + '"><span class="mbPlay"></span><span>' + btnTxt + '</span></button>';
+      if (!cssSpriteInto(el.querySelector(".mbShopIco div"), icon, 52)) {
+        var d = el.querySelector(".mbShopIco div"); d.textContent = "\uD83E\uDE99"; d.style.fontSize = "38px";
+      }
+      el.querySelector(".mbShopBtn").onclick = function () { fireBtn(buy); };
+      body.appendChild(el);
+    });
+  }
+  function isDescOf(n, anc) { var p = n; while (p) { if (p === anc) return true; p = p.parent; } return false; }
+
   /* ============ mostrar/fechar ============ */
   function show(root, kind) {
-    if (kind === "settings") renderSettings(root); else renderBooster(root);
+    if (kind === "settings") renderSettings(root);
+    else if (kind === "shop") renderShop(root);
+    else renderBooster(root);
     root._mbShowing = true;
     if (root.x < PARK_X/2) root.x += PARK_X; // garante estacionado
     overlay.style.display = "flex";
@@ -220,6 +283,7 @@
   }
   function classify(n){
     if (findDesc(n,"Music") && findDesc(n,"Sound")) return "settings";
+    if (findDesc(n,"FreeContent") || (findDesc(n,"FirstContent") && findDesc(n,"SecondContent"))) return "shop";
     if (findDesc(n,"Des") && (findDesc(n,"Get",cc.Button)||findDesc(n,"GetItem",cc.Button))) return "booster";
     return null;
   }
