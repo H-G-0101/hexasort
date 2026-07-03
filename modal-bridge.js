@@ -288,7 +288,22 @@
     return null;
   }
 
-  /* ============ hooks: intercepta ANTES do primeiro render ============ */
+  /* ============ preload: elimina o "%" no 1o clique ============ */
+  // Os prefabs dos modais carregam sob demanda (o jogo mostra % durante o load).
+  // Pre-carregamos o bundle 'local' em background: no clique, ja esta em cache.
+  var preloadState = 0; // 0=pendente 1=rodando 2=feito
+  var bootSeenAt = 0;
+  function preloadAll() {
+    if (preloadState || !cc.assetManager || !cc.assetManager.getBundle) return;
+    var b = cc.assetManager.getBundle("local");
+    if (!b) return;
+    preloadState = 1;
+    console.log(TAG, "pre-carregando bundle local em background...");
+    b.loadDir("", function (err) {
+      preloadState = 2;
+      console.log(TAG, err ? "preload com erros (ok, parcial)" : "preload completo — modais abrem sem loading");
+    });
+  }
   var hooksDone = false;
   function inspectNew(child) {
     try {
@@ -338,6 +353,9 @@
       installHooks();
       applyAudio();
       var scene = cc.director.getScene(); if (!scene) return;
+      // dispara o preload ~2.5s depois do jogo subir (nao concorre com o boot)
+      if (!bootSeenAt) bootSeenAt = Date.now();
+      else if (preloadState === 0 && Date.now() - bootSeenAt > 2500) preloadAll();
 
       // modal DOM aberto: fecha se o nativo sumiu; mantem estacionado
       if (current) {
