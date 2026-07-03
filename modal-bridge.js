@@ -86,7 +86,14 @@
   + "background:linear-gradient(180deg,#ff6b6b,#e53935);color:#fff;font-family:system-ui,Arial,sans-serif;"
   + "font-size:15px;font-weight:900;line-height:26px;text-align:center;pointer-events:none;"
   + "border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transform:translate(-50%,-50%)}"
-  + ".mbBadge.zero{background:linear-gradient(180deg,#b6bdcf,#8b93ab)}";
+  + ".mbBadge.zero{background:linear-gradient(180deg,#b6bdcf,#8b93ab)}"
+  /* stepper de quantidade */
+  + "#mbQty{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 14px}"
+  + "#mbQty button{width:44px;height:44px;border:none;border-radius:50%;font-size:24px;font-weight:900;color:#fff;"
+  + "background:linear-gradient(180deg,#7c4dff,#448aff);cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.2)}"
+  + "#mbQty button:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.2)}"
+  + "#mbQty span{min-width:56px;text-align:center;font-size:26px;font-weight:900;color:#2d3348}"
+  + "#mbQty small{display:block;font-size:12px;color:#8b93ab;font-weight:700}";
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   var overlay = document.createElement("div");
@@ -202,10 +209,28 @@
         iconDiv.style.width=w+"px"; iconDiv.style.height=h+"px";
         iconDiv.style.background="url('"+tex.nativeUrl+"') no-repeat -"+r.x+"px -"+r.y+"px";
         iconDiv.style.transform="scale("+sc+")"+(rot?" rotate(-90deg)":"");
-      } else { iconDiv.textContent="\uD83D\uDD28"; iconDiv.style.fontSize="84px"; }
-    } catch(e){ iconDiv.textContent="\uD83D\uDD28"; iconDiv.style.fontSize="84px"; }
+      } else { iconDiv.textContent="\uD83D\uDCA3"; iconDiv.style.fontSize="84px"; }
+    } catch(e){ iconDiv.textContent="\uD83D\uDCA3"; iconDiv.style.fontSize="84px"; }
 
-    document.getElementById("mbBuy").onclick=function(){ fireBtn(buy); };
+    // stepper de quantidade (compra multipla: dispara o Buy nativo N vezes
+    // no mesmo tick — N pushes no estoque antes do popup fechar)
+    var qty = 1, PRICE = 50;
+    var qtyDiv = document.createElement("div");
+    qtyDiv.id = "mbQty";
+    qtyDiv.innerHTML = '<button id="mbQm">\u2212</button><span><b id="mbQn">1</b><small id="mbQp">50</small></span><button id="mbQp2">+</button>';
+    body.insertBefore(qtyDiv, document.getElementById("mbBtns"));
+    function syncQty(){
+      document.getElementById("mbQn").textContent = qty;
+      document.getElementById("mbQp").textContent = (qty*PRICE) + " \uD83D\uDC8E";
+      document.getElementById("mbBuyTxt").textContent = String(qty*PRICE);
+    }
+    document.getElementById("mbQm").onclick = function(){ if(qty>1){qty--; syncQty();} };
+    document.getElementById("mbQp2").onclick = function(){ if(qty<9){qty++; syncQty();} };
+    syncQty();
+
+    document.getElementById("mbBuy").onclick=function(){
+      for (var i=0;i<qty;i++) fireBtn(buy); // cada disparo: -50, push estoque
+    };
     document.getElementById("mbGet").onclick=function(){ fireBtn(get); };
   }
 
@@ -335,12 +360,12 @@
     } catch (e) {}
     return null;
   }
-  function itemCount(items, idx) { // idx 0..2 (ordem esquerda->direita)
-    if (!items) return 0;
-    if (Array.isArray(items)) return items[idx] | 0;
-    var keys = Object.keys(items).sort();
-    var k = keys[idx];
-    return k != null ? (items[k] | 0) : 0;
+  var ITEM_TYPES = ["clear", "move", "refresh"]; // ordem dos botoes esq->dir
+  function itemCount(items, idx) {
+    if (!items || !Array.isArray(items)) return 0;
+    var t = ITEM_TYPES[idx], n = 0;
+    for (var i = 0; i < items.length; i++) if (items[i] && items[i].type === t) n++;
+    return n;
   }
   var badgeEls = [];
   function nodeToCss(node) { // canto sup. direito do node -> coordenadas CSS
