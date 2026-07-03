@@ -55,7 +55,7 @@
       });
     },
     getPayments: function () { return Promise.resolve({ getCatalog: function(){return Promise.resolve([]);} }); },
-    environment: { i18n: { lang: "ru" } },
+    environment: { i18n: { lang: "en" } },
     deviceInfo: { type: "mobile" },
     isAvailableMethod: function () { return Promise.resolve(false); }
   };
