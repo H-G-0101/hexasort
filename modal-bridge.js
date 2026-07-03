@@ -50,8 +50,10 @@
   + "#mbBtns button:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.18)}"
   + "#mbBuy{background:linear-gradient(180deg,#42c6ff,#1e88e5)}"
   + "#mbGet{background:linear-gradient(180deg,#ffd54f,#fb9e00);color:#5c3d00!important}"
-  + ".mbCoin{display:inline-block;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe680,#f4b400);"
-  + "box-shadow:0 0 0 2px #d18f00 inset;font-size:13px;line-height:22px;color:#8a5c00;font-weight:900;text-align:center}"
+  + ".mbCoin{display:inline-block;width:22px;height:20px;"
+  + "clip-path:polygon(28% 0,72% 0,100% 34%,50% 100%,0 34%);"
+  + "background:linear-gradient(180deg,#aaf2ff 0%,#41d6ff 38%,#1e88e5 75%,#1556 9e 100%);"
+  + "background:linear-gradient(180deg,#aaf2ff 0%,#41d6ff 38%,#1e88e5 100%)}"
   + ".mbPlay{display:inline-block;width:0;height:0;border-left:14px solid #5c3d00;border-top:9px solid transparent;border-bottom:9px solid transparent}"
   + ".mbRow{display:flex;align-items:center;gap:14px;padding:14px 6px;border-bottom:1px solid #eef1f7}"
   + ".mbRow:last-child{border-bottom:none}"
@@ -176,7 +178,7 @@
     document.getElementById("mbHead").textContent = labelText(title) || "Booster";
     var body=document.getElementById("mbBody");
     body.innerHTML='<div id="mbIconWrap"><div id="mbIcon"></div></div><div id="mbDes"></div><div id="mbBtns">'
-      +'<button id="mbBuy"><span class="mbCoin">G</span><span id="mbBuyTxt"></span></button>'
+      +'<button id="mbBuy"><span class="mbCoin"></span><span id="mbBuyTxt"></span></button>'
       +'<button id="mbGet"><span class="mbPlay"></span><span id="mbGetTxt"></span></button></div>';
     document.getElementById("mbDes").textContent = labelText(des) || "";
     document.getElementById("mbBuyTxt").textContent = (labelText(buy).replace(/[^\d]/g,"")) || "50";
@@ -238,7 +240,7 @@
         '<div class="mbShopTxt">' + main + (sub ? '<small>' + sub + '</small>' : '') + '</div>' +
         '<button class="mbShopBtn' + (cfg[1] ? ' free' : '') + '"><span class="mbPlay"></span><span>' + btnTxt + '</span></button>';
       if (!cssSpriteInto(el.querySelector(".mbShopIco div"), icon, 52)) {
-        var d = el.querySelector(".mbShopIco div"); d.textContent = "\uD83E\uDE99"; d.style.fontSize = "38px";
+        var d = el.querySelector(".mbShopIco div"); d.textContent = "\uD83D\uDC8E"; d.style.fontSize = "38px";
       }
       el.querySelector(".mbShopBtn").onclick = function () { fireBtn(buy); };
       body.appendChild(el);
