@@ -210,22 +210,29 @@
     document.getElementById("mbBuy").style.display = buy ? "" : "none";
     document.getElementById("mbGet").style.display = get ? "" : "none";
 
-    var iconDiv=document.getElementById("mbIcon");
-    try {
-      var sp=icon&&icon.getComponent(cc.Sprite), sf=sp&&sp.spriteFrame, tex=sf&&sf.getTexture();
-      if(tex&&tex.nativeUrl){
-        var r=sf.getRect(), rot=sf.isRotated();
-        var w=rot?r.height:r.width, h=rot?r.width:r.height;
-        var sc=Math.min(120/w,120/h);
-        iconDiv.style.width=w+"px"; iconDiv.style.height=h+"px";
-        iconDiv.style.background="url('"+tex.nativeUrl+"') no-repeat -"+r.x+"px -"+r.y+"px";
-        iconDiv.style.transform="scale("+sc+")"+(rot?" rotate(-90deg)":"");
-      } else { iconDiv.textContent="\uD83D\uDCA3"; iconDiv.style.fontSize="84px"; }
-    } catch(e){ iconDiv.textContent="\uD83D\uDCA3"; iconDiv.style.fontSize="84px"; }
-
     // tipo do booster e componente do modal (chamada direta, imune ao hide)
     var comp = getItemComp(root);
     var itype = comp && comp._data ? comp._data.type : null;
+
+    // icone por TIPO com nossos PNGs (deterministico; corrige bomba aparecendo em mao/setas)
+    var iconDiv=document.getElementById("mbIcon");
+    var slotByType = { clear: 0, move: 1, refresh: 2 };
+    if (itype != null && slotByType[itype] !== undefined) {
+      iconDiv.innerHTML = '<img src="' + ICON_IMGS[slotByType[itype]] + '" style="width:120px;height:120px;object-fit:contain">';
+    } else {
+      try {
+        var sp=icon&&icon.getComponent(cc.Sprite), sf=sp&&sp.spriteFrame, tex=sf&&sf.getTexture();
+        if(tex&&tex.nativeUrl){
+          var r=sf.getRect(), rot=sf.isRotated();
+          var w=rot?r.height:r.width, h=rot?r.width:r.height;
+          var sc=Math.min(120/w,120/h);
+          iconDiv.style.width=w+"px"; iconDiv.style.height=h+"px";
+          iconDiv.style.background="url('"+tex.nativeUrl+"') no-repeat -"+r.x+"px -"+r.y+"px";
+          iconDiv.style.transform="scale("+sc+")"+(rot?" rotate(-90deg)":"");
+        } else { iconDiv.textContent="\uD83D\uDCA3"; iconDiv.style.fontSize="84px"; }
+      } catch(e){ iconDiv.textContent="\uD83D\uDCA3"; iconDiv.style.fontSize="84px"; }
+    }
+
     var canStock = itype === "clear" || itype === "move"; // refresh nao estoca (executa na hora)
 
     var qty = 1, PRICE = 50;
@@ -404,6 +411,43 @@
     "assets/local/native/66/6633f875-0ee2-4015-aaad-5a46d36c9956.0377a.png",   // mao (move)
     "assets/local/native/23/23ec48d8-ac69-4ad3-a835-09429843f849.9d9c7.png"    // ciclo (refresh)
   ];
+
+  function findGameComp() {
+    try {
+      var start = boosterNatives[0] && boosterNatives[0].isValid ? boosterNatives[0].parent : null;
+      var p = start;
+      while (p) {
+        var cs = p._components || [];
+        for (var i = 0; i < cs.length; i++)
+          if (cs[i] && typeof cs[i].hideChoisePanel === "function") return cs[i];
+        p = p.parent;
+      }
+      var scene = cc.director.getScene(); var out = null;
+      (function w(n) {
+        if (out || !n) return;
+        var cs2 = n._components || [];
+        for (var i = 0; i < cs2.length; i++)
+          if (cs2[i] && typeof cs2[i].hideChoisePanel === "function") { out = cs2[i]; return; }
+        var c = n.children || [];
+        for (var j = 0; j < c.length; j++) w(c[j]);
+      })(scene);
+      return out;
+    } catch (e) { return null; }
+  }
+  function cancelChoicePanel(type) {
+    try {
+      var g = findGameComp();
+      if (!g) { console.warn(TAG, "Game comp nao achado p/ cancelar"); return; }
+      g.hideChoisePanel(type);
+      console.log(TAG, "uso automatico cancelado (", type, ")");
+    } catch (e) { console.warn(TAG, "cancel err", e); }
+  }
+  function getItemComp(root) {
+    var cs = (root && root._components) || [];
+    for (var i = 0; i < cs.length; i++)
+      if (cs[i] && cs[i]._data && typeof cs[i].clickBuyHandle === "function") return cs[i];
+    return null;
+  }
 
   var bar = document.createElement("div");
   bar.id = "mbBar";
