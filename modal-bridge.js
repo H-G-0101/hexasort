@@ -80,7 +80,13 @@
   + ".mbShopBtn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.18)}"
   + ".mbShopBtn.free{background:linear-gradient(180deg,#6fdc4f,#3cb527);color:#fff}"
   + ".mbShopBtn .mbPlay{border-left-color:#5c3d00;border-top-width:7px;border-bottom-width:7px;border-left-width:11px}"
-  + ".mbShopBtn.free .mbPlay{border-left-color:#fff}";
+  + ".mbShopBtn.free .mbPlay{border-left-color:#fff}"
+  /* badges de contagem de booster */
+  + ".mbBadge{position:fixed;z-index:9998;min-width:26px;height:26px;padding:0 7px;border-radius:13px;"
+  + "background:linear-gradient(180deg,#ff6b6b,#e53935);color:#fff;font-family:system-ui,Arial,sans-serif;"
+  + "font-size:15px;font-weight:900;line-height:26px;text-align:center;pointer-events:none;"
+  + "border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transform:translate(-50%,-50%)}"
+  + ".mbBadge.zero{background:linear-gradient(180deg,#b6bdcf,#8b93ab)}";
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
 
   var overlay = document.createElement("div");
@@ -306,6 +312,87 @@
       console.log(TAG, err ? "preload com erros (ok, parcial)" : "preload completo — modais abrem sem loading");
     });
   }
+  /* ============ badges de booster (contagem no canto do botao) ============ */
+  // Conta real: lida do SAVE do jogo (user.get("items")), que persiste no
+  // storage da SDK. Enumeramos o storage e achamos o JSON com "items".
+  var saveKey = null;
+  function readItems() {
+    try {
+      var st = window.localStorage;
+      if (saveKey) {
+        var v = st.getItem(saveKey);
+        if (v) { var o = JSON.parse(v); if (o && o.items) return o.items; }
+        saveKey = null;
+      }
+      for (var i = 0; i < st.length; i++) {
+        var k = st.key(i); if (!k) continue;
+        var raw = st.getItem(k); if (!raw || raw[0] !== "{") continue;
+        try {
+          var o2 = JSON.parse(raw);
+          if (o2 && typeof o2 === "object" && o2.items) { saveKey = k; return o2.items; }
+        } catch (e) {}
+      }
+    } catch (e) {}
+    return null;
+  }
+  function itemCount(items, idx) { // idx 0..2 (ordem esquerda->direita)
+    if (!items) return 0;
+    if (Array.isArray(items)) return items[idx] | 0;
+    var keys = Object.keys(items).sort();
+    var k = keys[idx];
+    return k != null ? (items[k] | 0) : 0;
+  }
+  var badgeEls = [];
+  function nodeToCss(node) { // canto sup. direito do node -> coordenadas CSS
+    try {
+      var cam = cc.Camera.main || (cc.Camera.cameras && cc.Camera.cameras[0]);
+      var wp = node.convertToWorldSpaceAR(cc.v2(node.width * (1 - node.anchorX), node.height * (1 - node.anchorY)));
+      var sp = cam ? cam.getWorldToScreenPoint(wp) : wp;
+      var rect = cc.game.canvas.getBoundingClientRect();
+      var cs = cc.view.getCanvasSize();
+      return { x: rect.left + sp.x / cs.width * rect.width,
+               y: rect.top + (1 - sp.y / cs.height) * rect.height };
+    } catch (e) { return null; }
+  }
+  function findBoosterButtons(scene) { // botoes = sprites com a textura 63c39b78
+    var out = [];
+    (function w(n) {
+      if (!n || !n.activeInHierarchy) return;
+      if (n.x < PARK_X / 2) { // ignora estacionados
+        var sp = n.getComponent && n.getComponent(cc.Sprite);
+        var sf = sp && sp.spriteFrame, tex = sf && sf.getTexture && sf.getTexture();
+        if (tex && tex.nativeUrl && tex.nativeUrl.indexOf("63c39b78") >= 0) out.push(n);
+        var c = n.children || [];
+        for (var i = 0; i < c.length; i++) w(c[i]);
+      }
+    })(scene);
+    out.sort(function (a, b) {
+      var pa = nodeToCss(a), pb = nodeToCss(b);
+      return (pa && pb) ? pa.x - pb.x : 0;
+    });
+    return out.slice(0, 3);
+  }
+  function updateBadges(scene) {
+    var btns = findBoosterButtons(scene);
+    var items = readItems();
+    for (var i = 0; i < 3; i++) {
+      var el = badgeEls[i];
+      if (!el) {
+        el = document.createElement("div"); el.className = "mbBadge";
+        document.body.appendChild(el); badgeEls[i] = el;
+      }
+      var n = btns[i];
+      var p = n && nodeToCss(n);
+      if (!n || !p || overlay.style.display === "flex") { el.style.display = "none"; continue; }
+      var cnt = itemCount(items, i);
+      el.textContent = String(cnt);
+      el.classList.toggle("zero", cnt === 0);
+      el.style.display = "block";
+      el.style.left = p.x + "px";
+      el.style.top = p.y + "px";
+    }
+  }
+
   var hooksDone = false;
   function inspectNew(child) {
     try {
@@ -388,6 +475,7 @@
       installHooks();
       applyAudio();
       var scene = cc.director.getScene(); if (!scene) return;
+      updateBadges(scene);
       // dispara o preload ~2.5s depois do jogo subir (nao concorre com o boot)
       if (!bootSeenAt) bootSeenAt = Date.now();
       else if (preloadState === 0 && Date.now() - bootSeenAt > 2500) preloadAll();
