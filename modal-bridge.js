@@ -223,32 +223,38 @@
       } else { iconDiv.textContent="\uD83D\uDCA3"; iconDiv.style.fontSize="84px"; }
     } catch(e){ iconDiv.textContent="\uD83D\uDCA3"; iconDiv.style.fontSize="84px"; }
 
-    // stepper de quantidade (compra multipla: dispara o Buy nativo N vezes
-    // no mesmo tick — N pushes no estoque antes do popup fechar)
+    // tipo do booster e componente do modal (chamada direta, imune ao hide)
+    var comp = getItemComp(root);
+    var itype = comp && comp._data ? comp._data.type : null;
+    var canStock = itype === "clear" || itype === "move"; // refresh nao estoca (executa na hora)
+
     var qty = 1, PRICE = 50;
-    var qtyDiv = document.createElement("div");
-    qtyDiv.id = "mbQty";
-    qtyDiv.innerHTML = '<button id="mbQm">\u2212</button><span><b id="mbQn">1</b><small id="mbQp">50</small></span><button id="mbQp2">+</button>';
-    body.insertBefore(qtyDiv, document.getElementById("mbBtns"));
-    function syncQty(){
-      document.getElementById("mbQn").textContent = qty;
-      document.getElementById("mbQp").textContent = (qty*PRICE) + " \uD83D\uDC8E";
-      document.getElementById("mbBuyTxt").textContent = String(qty*PRICE);
+    if (canStock) {
+      var qtyDiv = document.createElement("div");
+      qtyDiv.id = "mbQty";
+      qtyDiv.innerHTML = '<button id="mbQm">\u2212</button><span><b id="mbQn">1</b><small id="mbQp">50</small></span><button id="mbQp2">+</button>';
+      body.insertBefore(qtyDiv, document.getElementById("mbBtns"));
+      var syncQty = function(){
+        document.getElementById("mbQn").textContent = qty;
+        document.getElementById("mbQp").textContent = (qty*PRICE) + " \uD83D\uDC8E";
+        document.getElementById("mbBuyTxt").textContent = String(qty*PRICE);
+      };
+      document.getElementById("mbQm").onclick = function(){ if(qty>1){qty--; syncQty();} };
+      document.getElementById("mbQp2").onclick = function(){ if(qty<9){qty++; syncQty();} };
+      syncQty();
     }
-    document.getElementById("mbQm").onclick = function(){ if(qty>1){qty--; syncQty();} };
-    document.getElementById("mbQp2").onclick = function(){ if(qty<9){qty++; syncQty();} };
-    syncQty();
 
     document.getElementById("mbBuy").onclick=function(){
-      for (var i=0;i<qty;i++) fireBtn(buy); // cada disparo: -50, push estoque
-      // a compra do jogo arma o uso automaticamente; cancelamos p/ ficar no estoque
-      setTimeout(cancelChoicePanel, 150);
-      setTimeout(cancelChoicePanel, 450);
+      for (var i=0;i<qty;i++) {
+        if (comp && comp.clickBuyHandle) { try { comp.clickBuyHandle(); } catch(e){ fireBtn(buy); } }
+        else fireBtn(buy);
+      }
+      if (canStock) { setTimeout(function(){cancelChoicePanel(itype);},150); setTimeout(function(){cancelChoicePanel(itype);},450); }
     };
     document.getElementById("mbGet").onclick=function(){
-      fireBtn(get);
-      setTimeout(cancelChoicePanel, 300);
-      setTimeout(cancelChoicePanel, 900);
+      if (comp && comp.clickGetHandle) { try { comp.clickGetHandle(); } catch(e){ fireBtn(get); } }
+      else fireBtn(get);
+      if (canStock) { setTimeout(function(){cancelChoicePanel(itype);},300); setTimeout(function(){cancelChoicePanel(itype);},900); }
     };
   }
 
@@ -423,7 +429,6 @@
           if (cs[i] && typeof cs[i].hideChoisePanel === "function") return cs[i];
         p = p.parent;
       }
-      // fallback: varre a cena
       var scene = cc.director.getScene(); var out = null;
       (function w(n) {
         if (out || !n) return;
@@ -436,13 +441,19 @@
       return out;
     } catch (e) { return null; }
   }
-  function cancelChoicePanel() { // comprar NAO deve armar o uso: cancela o painel
+  function cancelChoicePanel(type) { // desarma o uso auto pos-compra (clear/move)
     try {
       var g = findGameComp();
-      if (!g) return;
-      g.hideChoisePanel && g.hideChoisePanel();
-      g.switchChoiseUIStatus && g.switchChoiseUIStatus(false);
-    } catch (e) {}
+      if (!g) { console.warn(TAG, "Game comp nao achado p/ cancelar"); return; }
+      g.hideChoisePanel(type); // com o tipo: roda func_cancelClear/Move + reativa botoes
+      console.log(TAG, "uso automatico cancelado (", type, ")");
+    } catch (e) { console.warn(TAG, "cancel err", e); }
+  }
+  function getItemComp(root) { // componente GetItem do modal (tem _data e clickBuyHandle)
+    var cs = (root && root._components) || [];
+    for (var i = 0; i < cs.length; i++)
+      if (cs[i] && cs[i]._data && typeof cs[i].clickBuyHandle === "function") return cs[i];
+    return null;
   }
 
   var bar = document.createElement("div");
