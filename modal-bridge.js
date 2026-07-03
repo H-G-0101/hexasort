@@ -400,20 +400,42 @@
     } catch (e) { return null; }
   }
   var btnsLogged = false;
-  function findBoosterButtons(scene) { // assinatura exata: botao com filho "Total"
-    var out = [];
+  var ICON_TEX = ["0f5d5f39", "8f4d72d5",           // bomba (clear)
+                  "6633f875", "e62e136f",           // mao (move)
+                  "23ec48d8", "9b40d5a8"];          // ciclo (refresh)
+  function iconSlot(url) {
+    for (var i = 0; i < ICON_TEX.length; i++) if (url.indexOf(ICON_TEX[i]) >= 0) return (i / 2) | 0;
+    return -1;
+  }
+  function findBoosterButtons(scene) {
+    // ancora no SPRITE DO ICONE visivel e sobe ate o ancestral com filho "Total"
+    var slots = [null, null, null];
     (function w(n) {
       if (!n || !n.activeInHierarchy || n.x > PARK_X / 2) return;
-      if (n.getChildByName && n.getChildByName("Total")) out.push(n);
+      var sp = n.getComponent && n.getComponent(cc.Sprite);
+      var sf = sp && sp.spriteFrame, tex = sf && sf.getTexture && sf.getTexture();
+      if (tex && tex.nativeUrl) {
+        var slot = iconSlot(tex.nativeUrl);
+        if (slot >= 0) {
+          var p = n, hops = 0, owner = null;
+          while (p && hops < 4) {
+            if (p.getChildByName && p.getChildByName("Total")) { owner = p; break; }
+            p = p.parent; hops++;
+          }
+          if (owner && !slots[slot]) slots[slot] = owner;
+        }
+      }
       var c = n.children || [];
       for (var i = 0; i < c.length; i++) w(c[i]);
     })(scene);
-    out.sort(function (a, b) {
-      var pa = nodeToCss(a), pb = nodeToCss(b);
-      return (pa && pb) ? pa.x - pb.x : 0;
-    });
-    if (!btnsLogged && out.length) { btnsLogged = true; console.log(TAG, "botoes booster:", out.length); }
-    return out.slice(0, 3);
+    if (!btnsLogged && (slots[0] || slots[1] || slots[2])) {
+      btnsLogged = true;
+      for (var s = 0; s < 3; s++) {
+        var q = slots[s] && nodeToCss(slots[s]);
+        console.log(TAG, "slot", s, slots[s] ? slots[s].name : "-", q ? (q.x | 0) + "," + (q.y | 0) : "-");
+      }
+    }
+    return slots;
   }
   function updateBadges(scene) {
     var btns = findBoosterButtons(scene);
