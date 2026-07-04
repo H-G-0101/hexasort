@@ -26,6 +26,7 @@
   }
 
   /* ============ CSS + DOM base ============ */
+  var MB_GEM = "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";
   var css = ""
   + "#mbOverlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;"
   + "background:rgba(15,18,32,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);"
@@ -94,6 +95,18 @@
   + "font-weight:900;line-height:22px;text-align:center;border:2px solid #fff;"
   + "box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none}"
   + ".mbBoost .mbBadge.zero{background:linear-gradient(180deg,#b6bdcf,#8b93ab)}"
+  + "#mbPill{position:fixed;z-index:9996;display:none;align-items:center;height:44px;padding:0 8px 0 26px;"
+  + "border-radius:22px;background:linear-gradient(90deg,#7c4dff,#448aff);"
+  + "box-shadow:0 3px 8px rgba(0,0,0,.3);font-family:system-ui,Arial,sans-serif;pointer-events:auto}"
+  + "#mbPill .cpInner{display:flex;align-items:center;height:34px;padding:0 8px 0 30px;border-radius:17px;"
+  + "background:linear-gradient(180deg,#fff,#e6ecfc);position:relative}"
+  + "#mbPill .cpGem{position:absolute;left:-20px;top:50%;transform:translateY(-50%);width:40px;height:40px;"
+  + "background:url('data:image/png;base64,'+MB_GEM) no-repeat center/contain}"
+  + "#mbPill .cpAmt{min-width:44px;text-align:center;font-size:19px;font-weight:900;color:#2d3348;padding:0 6px}"
+  + "#mbPill .cpAdd{width:40px;height:40px;margin-left:2px;border:none;border-radius:50%;cursor:pointer;"
+  + "background:radial-gradient(circle at 40% 35%,#7dea5a,#3cb527);box-shadow:0 3px 0 #237a15;"
+  + "color:#fff;font-size:26px;font-weight:900;line-height:40px;text-align:center}"
+  + "#mbPill .cpAdd:active{transform:translateY(2px);box-shadow:0 1px 0 #237a15}";
   /* stepper de quantidade */
   + "#mbQty{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 14px}"
   + "#mbQty button{width:44px;height:44px;border:none;border-radius:50%;font-size:24px;font-weight:900;color:#fff;"
@@ -461,6 +474,72 @@
   function mountBar(){ if(!bar.parentNode && document.body) document.body.appendChild(bar); }
   mountBar(); document.addEventListener("DOMContentLoaded", mountBar);
 
+
+  /* ============ pilula de moedas DOM (arte do HTML do usuario) ============ */
+  function nodeToCssAt(node, ax, ay) { // ax/ay: 0..1 no retangulo do node -> px CSS
+    try {
+      var wp = node.convertToWorldSpaceAR(cc.v2(node.width * (ax - node.anchorX), node.height * (ay - node.anchorY)));
+      var vis = cc.view.getVisibleSize(), org = cc.view.getVisibleOrigin();
+      var rect = cc.game.canvas.getBoundingClientRect();
+      var nx = (wp.x - org.x) / vis.width, ny = (wp.y - org.y) / vis.height;
+      if (nx < -0.3 || nx > 1.3 || ny < -0.3 || ny > 1.3) return null;
+      return { x: rect.left + nx * rect.width, y: rect.top + (1 - ny) * rect.height };
+    } catch (e) { return null; }
+  }
+  var pill = document.createElement("div");
+  pill.id = "mbPill";
+  pill.innerHTML = '<div class="cpInner"><span class="cpGem"></span><span class="cpAmt">0</span>' +
+                   '<button class="cpAdd">+</button></div>';
+  function mountPill(){ if(!pill.parentNode && document.body) document.body.appendChild(pill); }
+  mountPill(); document.addEventListener("DOMContentLoaded", mountPill);
+  var coinNative = null;          // nó btnCoin nativo (tem lbCount + clickCoinHandle)
+  function findCoinPill(scene) {
+    if (coinNative && coinNative.isValid && coinNative.activeInHierarchy) return coinNative;
+    coinNative = null;
+    (function w(n) {
+      if (coinNative || !n || !n.activeInHierarchy || n.x > PARK_X / 2) return;
+      // pilula = no "Coin" com um filho label (contagem) e irmao "Add"
+      if (n.name === "Coin" && n.parent && n.parent.getChildByName && n.parent.getChildByName("Add")) {
+        coinNative = n; return;
+      }
+      var c = n.children || [];
+      for (var i = 0; i < c.length; i++) w(c[i]);
+    })(scene);
+    return coinNative;
+  }
+  function coinText(node) { // le o lbCount (label de contagem) do no
+    var out = "";
+    (function w(n){ var lb=n.getComponent&&n.getComponent(cc.Label);
+      if(lb&&lb.string!=null&&lb.string!=="") out=lb.string;
+      (n.children||[]).forEach(w); })(node);
+    return out;
+  }
+  pill.querySelector(".cpAdd").onclick = function(){
+    if (coinNative && coinNative.parent) {
+      var add = coinNative.parent.getChildByName("Add");
+      fireBtn(add && add.getComponent(cc.Button) ? add : coinNative); // Add abre GET_COIN; senao o proprio Coin
+    }
+  };
+  pill.querySelector(".cpInner").onclick = function(ev){
+    if (ev.target.classList.contains("cpAdd")) return;
+    if (coinNative) fireBtn(coinNative); // toque no corpo tambem abre a loja de moedas
+  };
+  function updatePill(scene) {
+    var n = findCoinPill(scene);
+    if (!n || overlay.style.display === "flex") { pill.style.display = "none"; return; }
+    // estaciona a pilula nativa (esconde) e posiciona a DOM no mesmo lugar
+    var p = nodeToCssAt(n, 0, 0.5); // canto esquerdo, meio vertical
+    if (!p) { pill.style.display = "none"; return; }
+    // esconde a arte nativa (mantem o no vivo p/ logica/label)
+    try { n.opacity = 0; var add=n.parent&&n.parent.getChildByName("Add"); if(add) add.opacity=0; } catch(e){}
+    pill.style.display = "flex";
+    pill.style.left = (p.x) + "px";
+    pill.style.top = (p.y) + "px";
+    pill.style.transform = "translate(-6px,-50%)";
+    var t = coinText(n);
+    pill.querySelector(".cpAmt").textContent = t || "0";
+  }
+
   // botoes nativos: capturados uma vez por cena (ordenados por x ANTES de estacionar)
   var boosterNatives = [null, null, null];
   function captureNatives(scene) {
@@ -592,6 +671,7 @@
       applyAudio();
       var scene = cc.director.getScene(); if (!scene) return;
       updateBar(scene);
+      updatePill(scene);
       // dispara o preload ~2.5s depois do jogo subir (nao concorre com o boot)
       if (!bootSeenAt) bootSeenAt = Date.now();
       else if (preloadState === 0 && Date.now() - bootSeenAt > 2500) preloadAll();
