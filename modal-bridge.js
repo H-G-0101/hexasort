@@ -104,12 +104,12 @@
   + "box-shadow:0 3px 8px rgba(0,0,0,.3);font-family:system-ui,Arial,sans-serif;pointer-events:auto}"
   + "#mbPill .cpInner{display:flex;align-items:center;height:26px;padding:0 6px 0 24px;border-radius:13px;"
   + "background:linear-gradient(180deg,#fff,#e6ecfc);position:relative}"
-  + "#mbPill .cpGem{position:absolute;left:-16px;top:50%;transform:translateY(-50%);width:34px;height:34px;background-repeat:no-repeat;background-position:center;background-size:contain}"
-  + "#mbPill .cpAmt{min-width:34px;text-align:center;font-size:15px;font-weight:900;color:#2d3348;padding:0 5px}"
+  + "#mbPill .cpGem{position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:40px;height:40px;background-repeat:no-repeat;background-position:center;background-size:contain}"
+  + "#mbPill .cpAmt{min-width:40px;text-align:center;font-size:16px;font-weight:900;color:#2d3348;padding:0 6px}"
   + "#mbPill .cpAdd{width:30px;height:30px;margin-left:1px;border:none;border-radius:50%;cursor:pointer;"
   + "background:radial-gradient(circle at 40% 35%,#7dea5a,#3cb527);box-shadow:0 3px 0 #237a15;"
   + "color:#fff;font-size:20px;font-weight:900;line-height:30px;text-align:center}"
-  + "#mbPill .cpAdd:active{transform:translateY(2px);box-shadow:0 1px 0 #237a15}";
+  + "#mbPill .cpAdd:active{transform:translateY(-50%) scale(.92)}";
   /* stepper de quantidade */
   + "#mbQty{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 14px}"
   + "#mbQty button{width:44px;height:44px;border:none;border-radius:50%;font-size:24px;font-weight:900;color:#fff;"
@@ -272,12 +272,18 @@
         if (comp && comp.clickBuyHandle) { try { comp.clickBuyHandle(); } catch(e){ fireBtn(buy); } }
         else fireBtn(buy);
       }
-      if (canStock) { setTimeout(function(){cancelChoicePanel(itype);},150); setTimeout(function(){cancelChoicePanel(itype);},450); }
+      if (canStock) {
+        setTimeout(function(){cancelChoicePanel(itype); purgeTouchOrphans();},150);
+        setTimeout(function(){cancelChoicePanel(itype); purgeTouchOrphans();},450);
+      }
     };
     document.getElementById("mbGet").onclick=function(){
       if (comp && comp.clickGetHandle) { try { comp.clickGetHandle(); } catch(e){ fireBtn(get); } }
       else fireBtn(get);
-      if (canStock) { setTimeout(function(){cancelChoicePanel(itype);},300); setTimeout(function(){cancelChoicePanel(itype);},900); }
+      if (canStock) {
+        setTimeout(function(){cancelChoicePanel(itype); purgeTouchOrphans();},300);
+        setTimeout(function(){cancelChoicePanel(itype); purgeTouchOrphans();},900);
+      }
     };
   }
 
@@ -457,6 +463,22 @@
       g.hideChoisePanel(type);
       console.log(TAG, "uso automatico cancelado (", type, ")");
     } catch (e) { console.warn(TAG, "cancel err", e); }
+  }
+  function purgeTouchOrphans() { // corrige N-1 "Touch" orfaos deixados pela multi-compra
+    try {
+      var g = findGameComp();
+      if (!g || g._readyMove) return 0;        // nunca durante o modo move ativo
+      var cells = (g.area && g.area.children) || [];
+      var removed = 0;
+      for (var i = 0; i < cells.length; i++) {
+        var t;
+        while ((t = cells[i].getChildByName && cells[i].getChildByName("Touch"))) {
+          t.removeFromParent(true); removed++;
+        }
+      }
+      if (removed) console.log(TAG, "purge: removidos", removed, "Touch orfaos");
+      return removed;
+    } catch (e) { return 0; }
   }
   function getItemComp(root) {
     var cs = (root && root._components) || [];
@@ -696,6 +718,7 @@
       var scene = cc.director.getScene(); if (!scene) return;
       updateBar(scene);
       updatePill(scene);
+      purgeTouchOrphans();
       // dispara o preload ~2.5s depois do jogo subir (nao concorre com o boot)
       if (!bootSeenAt) bootSeenAt = Date.now();
       else if (preloadState === 0 && Date.now() - bootSeenAt > 2500) preloadAll();
