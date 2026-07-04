@@ -10,6 +10,10 @@
 (function () {
   "use strict";
   var TAG = "[modal-bridge v3]";
+  // >>> posicao/tamanho da pilula (ajuste livre) <<<
+  var PILL_LEFT = 20;   // px da borda esquerda
+  var PILL_TOP  = 16;   // px do topo
+
   var PARK_X = 100000;
 
   /* ============ preferências de áudio ============ */
@@ -547,16 +551,15 @@
     return withAdd;
   }
   function updatePill(scene) {
-    var list = hideAllNativePills(scene);
+    var list = hideAllNativePills(scene);              // esconde todas as nativas
     var n = (coinNative && coinNative.isValid && coinNative.activeInHierarchy) ? coinNative : (list[0]||null);
     coinNative = n;
     if (!n || overlay.style.display === "flex") { pill.style.display = "none"; return; }
-    var p = nodeToCssAt(n, 0.5, 0.5); // centro do no nativo
-    if (!p) { pill.style.display = "none"; return; }
+    // posicao FIXA no canto (a pilula nativa vive sempre nesse canto) -> nao persegue o no
     pill.style.display = "flex";
-    pill.style.left = (p.x) + "px";
-    pill.style.top = (p.y) + "px";
-    pill.style.transform = "translate(-50%,-50%)"; // centraliza a DOM sobre a nativa
+    pill.style.left = PILL_LEFT + "px";
+    pill.style.top = PILL_TOP + "px";
+    pill.style.transform = "none";
     var t = coinText(n);
     pill.querySelector(".cpAmt").textContent = t || "0";
   }
