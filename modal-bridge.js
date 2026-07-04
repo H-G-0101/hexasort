@@ -464,11 +464,33 @@
       console.log(TAG, "uso automatico cancelado (", type, ")");
     } catch (e) { console.warn(TAG, "cancel err", e); }
   }
-  function purgeTouchOrphans() { // corrige N-1 "Touch" orfaos deixados pela multi-compra
+  function findBoardComp() { // componente do TABULEIRO (func_move/_readyMove/area vivem aqui)
     try {
       var g = findGameComp();
-      if (!g || g._readyMove) return 0;        // nunca durante o modo move ativo
-      var cells = (g.area && g.area.children) || [];
+      var cand = g && g.content && g.content.children && g.content.children[0];
+      var cs = cand ? (cand._components || []) : [];
+      for (var i = 0; i < cs.length; i++)
+        if (cs[i] && typeof cs[i].func_cancelMove === "function") return cs[i];
+    } catch (e) {}
+    // fallback: varredura da cena
+    try {
+      var scene = cc.director.getScene(); var out = null;
+      (function w(n) {
+        if (out || !n) return;
+        var cs2 = n._components || [];
+        for (var i = 0; i < cs2.length; i++)
+          if (cs2[i] && typeof cs2[i].func_cancelMove === "function") { out = cs2[i]; return; }
+        var c = n.children || [];
+        for (var j = 0; j < c.length; j++) w(c[j]);
+      })(scene);
+      return out;
+    } catch (e) { return null; }
+  }
+  function purgeTouchOrphans() { // remove TODOS os "Touch" orfaos (a multi-compra deixava N-1)
+    try {
+      var b = findBoardComp();
+      if (!b || b._readyMove) return 0;        // nunca durante o modo move ativo
+      var cells = (b.area && b.area.children) || [];
       var removed = 0;
       for (var i = 0; i < cells.length; i++) {
         var t;
