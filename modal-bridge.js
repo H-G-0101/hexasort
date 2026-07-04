@@ -95,16 +95,16 @@
   + "font-weight:900;line-height:22px;text-align:center;border:2px solid #fff;"
   + "box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none}"
   + ".mbBoost .mbBadge.zero{background:linear-gradient(180deg,#b6bdcf,#8b93ab)}"
-  + "#mbPill{position:fixed;z-index:9996;display:none;align-items:center;height:44px;padding:0 8px 0 26px;"
+  + "#mbPill{position:fixed;z-index:9996;display:none;align-items:center;height:34px;padding:0 6px 0 20px;"
   + "border-radius:22px;background:linear-gradient(90deg,#7c4dff,#448aff);"
   + "box-shadow:0 3px 8px rgba(0,0,0,.3);font-family:system-ui,Arial,sans-serif;pointer-events:auto}"
-  + "#mbPill .cpInner{display:flex;align-items:center;height:34px;padding:0 8px 0 30px;border-radius:17px;"
+  + "#mbPill .cpInner{display:flex;align-items:center;height:26px;padding:0 6px 0 24px;border-radius:13px;"
   + "background:linear-gradient(180deg,#fff,#e6ecfc);position:relative}"
-  + "#mbPill .cpGem{position:absolute;left:-20px;top:50%;transform:translateY(-50%);width:44px;height:44px;background-repeat:no-repeat;background-position:center;background-size:contain}"
-  + "#mbPill .cpAmt{min-width:44px;text-align:center;font-size:19px;font-weight:900;color:#2d3348;padding:0 6px}"
-  + "#mbPill .cpAdd{width:40px;height:40px;margin-left:2px;border:none;border-radius:50%;cursor:pointer;"
+  + "#mbPill .cpGem{position:absolute;left:-16px;top:50%;transform:translateY(-50%);width:34px;height:34px;background-repeat:no-repeat;background-position:center;background-size:contain}"
+  + "#mbPill .cpAmt{min-width:34px;text-align:center;font-size:15px;font-weight:900;color:#2d3348;padding:0 5px}"
+  + "#mbPill .cpAdd{width:30px;height:30px;margin-left:1px;border:none;border-radius:50%;cursor:pointer;"
   + "background:radial-gradient(circle at 40% 35%,#7dea5a,#3cb527);box-shadow:0 3px 0 #237a15;"
-  + "color:#fff;font-size:26px;font-weight:900;line-height:40px;text-align:center}"
+  + "color:#fff;font-size:20px;font-weight:900;line-height:30px;text-align:center}"
   + "#mbPill .cpAdd:active{transform:translateY(2px);box-shadow:0 1px 0 #237a15}";
   /* stepper de quantidade */
   + "#mbQty{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 14px}"
@@ -551,12 +551,12 @@
     var n = (coinNative && coinNative.isValid && coinNative.activeInHierarchy) ? coinNative : (list[0]||null);
     coinNative = n;
     if (!n || overlay.style.display === "flex") { pill.style.display = "none"; return; }
-    var p = nodeToCssAt(n, 0, 0.5); // canto esquerdo, meio vertical
+    var p = nodeToCssAt(n, 0.5, 0.5); // centro do no nativo
     if (!p) { pill.style.display = "none"; return; }
     pill.style.display = "flex";
     pill.style.left = (p.x) + "px";
     pill.style.top = (p.y) + "px";
-    pill.style.transform = "translate(-6px,-50%)";
+    pill.style.transform = "translate(-50%,-50%)"; // centraliza a DOM sobre a nativa
     var t = coinText(n);
     pill.querySelector(".cpAmt").textContent = t || "0";
   }
