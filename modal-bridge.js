@@ -524,17 +524,27 @@
     if (ev.target.classList.contains("cpAdd")) return;
     if (coinNative) fireBtn(coinNative); // toque no corpo tambem abre a loja de moedas
   };
-  function hideAllNativePills(scene) { // esconde TODAS as pilulas nativas (qualquer cena)
-    var list = [];
+  function hasNumLabel(n){
+    var ok=false;
+    (function w(x){ if(ok||!x) return; var lb=x.getComponent&&x.getComponent(cc.Label);
+      if(lb&&lb.string!=null&&/^[0-9]/.test(String(lb.string).trim())) ok=true;
+      (x.children||[]).forEach(w); })(n);
+    return ok;
+  }
+  function hideAllNativePills(scene) { // esconde TODAS as pilulas nativas (com ou sem "Add")
+    var withAdd = [];
     (function w(n){
       if(!n||!n.activeInHierarchy||n.x>PARK_X/2) return;
-      if(n.name==="Coin" && n.parent && n.parent.getChildByName && n.parent.getChildByName("Add")){
-        list.push(n);
-        try{ n.opacity=0; var a=n.parent.getChildByName("Add"); if(a) a.opacity=0; }catch(e){}
+      if(n.name==="Coin" && hasNumLabel(n)){
+        var hasAdd = n.parent && n.parent.getChildByName && n.parent.getChildByName("Add");
+        try{ n.opacity=0; if(hasAdd){ var a=n.parent.getChildByName("Add"); if(a) a.opacity=0; } }catch(e){}
+        if(hasAdd) withAdd.push(n); else if(!withAdd.length) withAdd.push(n);
       }
       var c=n.children||[]; for(var i=0;i<c.length;i++) w(c[i]);
     })(scene);
-    return list;
+    // prioriza a pilula que tem Add (gameplay) como ancora do nosso DOM
+    withAdd.sort(function(a,b){ var pa=a.parent&&a.parent.getChildByName("Add")?0:1, pb=b.parent&&b.parent.getChildByName("Add")?0:1; return pa-pb; });
+    return withAdd;
   }
   function updatePill(scene) {
     var list = hideAllNativePills(scene);
