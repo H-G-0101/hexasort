@@ -100,8 +100,7 @@
   + "box-shadow:0 3px 8px rgba(0,0,0,.3);font-family:system-ui,Arial,sans-serif;pointer-events:auto}"
   + "#mbPill .cpInner{display:flex;align-items:center;height:34px;padding:0 8px 0 30px;border-radius:17px;"
   + "background:linear-gradient(180deg,#fff,#e6ecfc);position:relative}"
-  + "#mbPill .cpGem{position:absolute;left:-20px;top:50%;transform:translateY(-50%);width:40px;height:40px;"
-  + "background:url('data:image/png;base64,'+MB_GEM) no-repeat center/contain}"
+  + "#mbPill .cpGem{position:absolute;left:-20px;top:50%;transform:translateY(-50%);width:44px;height:44px;background-repeat:no-repeat;background-position:center;background-size:contain}"
   + "#mbPill .cpAmt{min-width:44px;text-align:center;font-size:19px;font-weight:900;color:#2d3348;padding:0 6px}"
   + "#mbPill .cpAdd{width:40px;height:40px;margin-left:2px;border:none;border-radius:50%;cursor:pointer;"
   + "background:radial-gradient(circle at 40% 35%,#7dea5a,#3cb527);box-shadow:0 3px 0 #237a15;"
@@ -492,6 +491,7 @@
                    '<button class="cpAdd">+</button></div>';
   function mountPill(){ if(!pill.parentNode && document.body) document.body.appendChild(pill); }
   mountPill(); document.addEventListener("DOMContentLoaded", mountPill);
+  pill.querySelector(".cpGem").style.backgroundImage = "url('data:image/png;base64," + MB_GEM + "')";
   var coinNative = null;          // nó btnCoin nativo (tem lbCount + clickCoinHandle)
   function findCoinPill(scene) {
     if (coinNative && coinNative.isValid && coinNative.activeInHierarchy) return coinNative;
@@ -524,14 +524,25 @@
     if (ev.target.classList.contains("cpAdd")) return;
     if (coinNative) fireBtn(coinNative); // toque no corpo tambem abre a loja de moedas
   };
+  function hideAllNativePills(scene) { // esconde TODAS as pilulas nativas (qualquer cena)
+    var list = [];
+    (function w(n){
+      if(!n||!n.activeInHierarchy||n.x>PARK_X/2) return;
+      if(n.name==="Coin" && n.parent && n.parent.getChildByName && n.parent.getChildByName("Add")){
+        list.push(n);
+        try{ n.opacity=0; var a=n.parent.getChildByName("Add"); if(a) a.opacity=0; }catch(e){}
+      }
+      var c=n.children||[]; for(var i=0;i<c.length;i++) w(c[i]);
+    })(scene);
+    return list;
+  }
   function updatePill(scene) {
-    var n = findCoinPill(scene);
+    var list = hideAllNativePills(scene);
+    var n = (coinNative && coinNative.isValid && coinNative.activeInHierarchy) ? coinNative : (list[0]||null);
+    coinNative = n;
     if (!n || overlay.style.display === "flex") { pill.style.display = "none"; return; }
-    // estaciona a pilula nativa (esconde) e posiciona a DOM no mesmo lugar
     var p = nodeToCssAt(n, 0, 0.5); // canto esquerdo, meio vertical
     if (!p) { pill.style.display = "none"; return; }
-    // esconde a arte nativa (mantem o no vivo p/ logica/label)
-    try { n.opacity = 0; var add=n.parent&&n.parent.getChildByName("Add"); if(add) add.opacity=0; } catch(e){}
     pill.style.display = "flex";
     pill.style.left = (p.x) + "px";
     pill.style.top = (p.y) + "px";
