@@ -477,30 +477,37 @@
         (n.children||[]).forEach(w); })(cc.director.getScene());
     } catch (e) {}
   }
-  function findLevelMgr() { // componente com showLevel (remonta a fase a partir do save)
+  function findLevelMgr() { // o scene-manager: tem container + showLevel + addContentToContainer
     try {
       var scene=cc.director.getScene(), out=null;
       (function w(n){ if(out||!n) return; var cs=n._components||[];
-        for(var i=0;i<cs.length;i++) if(cs[i]&&typeof cs[i].showLevel==="function"){out=cs[i];return;}
+        for(var i=0;i<cs.length;i++){ var c=cs[i];
+          if(c && typeof c.showLevel==="function" && typeof c.addContentToContainer==="function" && c.container){ out=c; return; } }
         (n.children||[]).forEach(w); })(scene);
       return out;
     } catch (e) { return null; }
   }
   function advanceToNextLevel() {
-    // O boot ja funciona (fase 1 monta) e o jogo JA salvou levels.order+=1 antes do SUCCESS.
-    // Recarregar a cena reexecuta o boot -> le o progresso -> monta a proxima fase,
-    // com o LoadingMain fechando normalmente. E o caminho mais confiavel.
+    // no boot, o scene-manager monta o board chamando this.showLevel() (via initData).
+    // o jogo JA fez levels.order+=1 e salvou antes do SUCCESS -> showLevel monta a proxima fase.
     try {
-      var scene = cc.director.getScene();
-      var name = scene && scene.name;
-      console.log(TAG, "SUCCESS: recarregando cena", name, "-> proxima fase");
-      // pequeno delay p/ garantir que o save (user.set levels) foi persistido
-      setTimeout(function () {
-        try {
-          if (name) cc.director.loadScene(name);
-          else location.reload();
-        } catch (e) { console.warn(TAG, "loadScene err", e); location.reload(); }
-      }, 200);
+      var mgr = findLevelMgr();
+      if (mgr && mgr.showLevel) {
+        mgr.showLevel();                       // hideAll(0) + addContentToContainer("Level")
+        console.log(TAG, "showLevel() no scene-manager -> proxima fase");
+        // showLevel dispara f.start() (loader); fechamos apos o board montar
+        var tries = 0;
+        var iv = setInterval(function () {
+          tries++;
+          var built = mgr.container && mgr.container.childrenCount > 0
+            && mgr.container.children[0] && mgr.container.children[0].childrenCount > 0;
+          if (built || tries > 40) { forceLoadingEnd(); if (built) clearInterval(iv); }
+          if (tries > 60) clearInterval(iv);
+        }, 100);
+      } else {
+        console.warn(TAG, "scene-manager nao encontrado; forcando fim do loader");
+        forceLoadingEnd();
+      }
     } catch (e) { console.warn(TAG, "advance err", e); forceLoadingEnd(); }
   }
 
