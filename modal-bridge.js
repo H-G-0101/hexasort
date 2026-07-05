@@ -464,6 +464,67 @@
       console.log(TAG, "uso automatico cancelado (", type, ")");
     } catch (e) { console.warn(TAG, "cancel err", e); }
   }
+  /* ============ suprimir popups que travam o loader (assets ausentes) ============ */
+  // Popups bloqueados: abrem prefab sob demanda que nao existe na reconstrucao,
+  // travando o loader em 99%. Bloqueando, o fluxo segue direto pra fase.
+  var BLOCK_POPUPS = { COIN_PIG: 1, GROWUP: 1 };
+  var popupHooked = false;
+  function hookPopup() {
+    if (popupHooked) return;
+    try {
+      // acha a instancia do Popup manager (tem .show, .paths, .container)
+      var mgr = null;
+      var scene = cc.director.getScene();
+      (function w(n){
+        if (mgr || !n) return;
+        var cs = n._components || [];
+        for (var i=0;i<cs.length;i++){
+          var c=cs[i];
+          if (c && typeof c.show==="function" && c.paths && c.container && typeof c.hideAll==="function"){ mgr=c; return; }
+        }
+        (n.children||[]).forEach(w);
+      })(scene);
+      if (!mgr) return; // tenta de novo no proximo tick
+      var proto = Object.getPrototypeOf(mgr);
+      if (proto._mbHooked) { popupHooked = true; return; }
+      var orig = proto.show;
+      proto.show = function(name, data){
+        if (BLOCK_POPUPS[name]) {
+          console.log(TAG, "popup bloqueado:", name, "(asset ausente) -> seguindo fluxo");
+          return Promise.resolve();
+        }
+        return orig.apply(this, arguments);
+      };
+      proto._mbHooked = true;
+      popupHooked = true;
+      console.log(TAG, "Popup.show hookado; bloqueando", Object.keys(BLOCK_POPUPS).join("/"));
+    } catch (e) { console.warn(TAG, "hookPopup err", e); }
+  }
+
+  /* ============ watchdog: loading travado em 99% (asset de fase ausente) ============ */
+  var loadingSince = 0;
+  function loadingWatchdog() {
+    try {
+      var ld = cc.find && cc.find("Canvas/loading");
+      if (ld && ld.activeInHierarchy) {
+        if (!loadingSince) loadingSince = Date.now();
+        else if (Date.now() - loadingSince > 8000) {
+          console.warn(TAG, "loading travado >8s (asset de fase ausente na captura); pulando");
+          try { ld.active = false; } catch (e) {}
+          try { // reseta o flag estatico p/ proximos loadings funcionarem
+            var cs = ld._components || [];
+            for (var i = 0; i < cs.length; i++)
+              if (cs[i] && cs[i].constructor && "isShow" in cs[i].constructor) cs[i].constructor.isShow = false;
+          } catch (e) {}
+          try { // volta pro menu pelo fluxo nativo (Home)
+            var g = findGameComp();
+            if (g && g.btnHome) fireBtn(g.btnHome);
+          } catch (e) {}
+          loadingSince = 0;
+        }
+      } else loadingSince = 0;
+    } catch (e) {}
+  }
   function findBoardComp() { // componente do TABULEIRO (func_move/_readyMove/area vivem aqui)
     try {
       var g = findGameComp();
@@ -741,6 +802,8 @@
       updateBar(scene);
       updatePill(scene);
       purgeTouchOrphans();
+      hookPopup();
+      loadingWatchdog();
       // dispara o preload ~2.5s depois do jogo subir (nao concorre com o boot)
       if (!bootSeenAt) bootSeenAt = Date.now();
       else if (preloadState === 0 && Date.now() - bootSeenAt > 2500) preloadAll();
