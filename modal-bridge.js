@@ -487,12 +487,20 @@
     } catch (e) { return null; }
   }
   function advanceToNextLevel() {
-    // o jogo JA fez levels.order+=1 e salvou antes do SUCCESS; so precisamos remontar o board
+    // O boot ja funciona (fase 1 monta) e o jogo JA salvou levels.order+=1 antes do SUCCESS.
+    // Recarregar a cena reexecuta o boot -> le o progresso -> monta a proxima fase,
+    // com o LoadingMain fechando normalmente. E o caminho mais confiavel.
     try {
-      var mgr = findLevelMgr();
-      if (mgr && mgr.showLevel) { mgr.showLevel(); console.log(TAG, "SUCCESS pulado -> proxima fase"); }
-      setTimeout(forceLoadingEnd, 300);   // garante o loader fechado apos remontar
-      setTimeout(forceLoadingEnd, 900);
+      var scene = cc.director.getScene();
+      var name = scene && scene.name;
+      console.log(TAG, "SUCCESS: recarregando cena", name, "-> proxima fase");
+      // pequeno delay p/ garantir que o save (user.set levels) foi persistido
+      setTimeout(function () {
+        try {
+          if (name) cc.director.loadScene(name);
+          else location.reload();
+        } catch (e) { console.warn(TAG, "loadScene err", e); location.reload(); }
+      }, 200);
     } catch (e) { console.warn(TAG, "advance err", e); forceLoadingEnd(); }
   }
 
