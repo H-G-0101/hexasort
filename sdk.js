@@ -6,14 +6,32 @@
 (function () {
   "use strict";
 
-  var mem = {}; // storage em memória (não usa localStorage real)
+  // storage PERSISTENTE: usa o localStorage real do navegador (com prefixo),
+  // para o progresso sobreviver a reloads (essencial p/ avancar de fase).
+  var LS = null;
+  try { LS = window.localStorage; var _t="__mb_test"; LS.setItem(_t,"1"); LS.removeItem(_t); }
+  catch (e) { LS = null; }
+  var mem = {};
+  var PFX = "ys_"; // prefixo p/ nao colidir com outras chaves
   var safeStorage = {
-    getItem: function (k) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; },
-    setItem: function (k, v) { mem[k] = String(v); },
-    removeItem: function (k) { delete mem[k]; },
-    clear: function () { mem = {}; },
-    key: function (i) { return Object.keys(mem)[i] || null; },
-    get length() { return Object.keys(mem).length; }
+    getItem: function (k) {
+      if (LS) { var v = LS.getItem(PFX + k); return v === null ? null : v; }
+      return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null;
+    },
+    setItem: function (k, v) { if (LS) LS.setItem(PFX + k, String(v)); else mem[k] = String(v); },
+    removeItem: function (k) { if (LS) LS.removeItem(PFX + k); else delete mem[k]; },
+    clear: function () {
+      if (LS) { for (var i = LS.length - 1; i >= 0; i--) { var kk = LS.key(i); if (kk && kk.indexOf(PFX) === 0) LS.removeItem(kk); } }
+      else mem = {};
+    },
+    key: function (i) {
+      if (LS) { var n = 0; for (var j = 0; j < LS.length; j++) { var kk = LS.key(j); if (kk && kk.indexOf(PFX) === 0) { if (n === i) return kk.slice(PFX.length); n++; } } return null; }
+      return Object.keys(mem)[i] || null;
+    },
+    get length() {
+      if (LS) { var n = 0; for (var j = 0; j < LS.length; j++) { var kk = LS.key(j); if (kk && kk.indexOf(PFX) === 0) n++; } return n; }
+      return Object.keys(mem).length;
+    }
   };
 
   var player = {

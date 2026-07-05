@@ -488,27 +488,14 @@
     } catch (e) { return null; }
   }
   function advanceToNextLevel() {
-    // no boot, o scene-manager monta o board chamando this.showLevel() (via initData).
-    // o jogo JA fez levels.order+=1 e salvou antes do SUCCESS -> showLevel monta a proxima fase.
+    // Storage agora PERSISTE (sdk.js). O jogo ja fez levels.order+=1 e salvou
+    // antes do SUCCESS. Um reload reexecuta o boot -> le o progresso salvo ->
+    // monta a proxima fase pelo caminho que comprovadamente funciona.
     try {
-      var mgr = findLevelMgr();
-      if (mgr && mgr.showLevel) {
-        mgr.showLevel();                       // hideAll(0) + addContentToContainer("Level")
-        console.log(TAG, "showLevel() no scene-manager -> proxima fase");
-        // showLevel dispara f.start() (loader); fechamos apos o board montar
-        var tries = 0;
-        var iv = setInterval(function () {
-          tries++;
-          var built = mgr.container && mgr.container.childrenCount > 0
-            && mgr.container.children[0] && mgr.container.children[0].childrenCount > 0;
-          if (built || tries > 40) { forceLoadingEnd(); if (built) clearInterval(iv); }
-          if (tries > 60) clearInterval(iv);
-        }, 100);
-      } else {
-        console.warn(TAG, "scene-manager nao encontrado; forcando fim do loader");
-        forceLoadingEnd();
-      }
-    } catch (e) { console.warn(TAG, "advance err", e); forceLoadingEnd(); }
+      forceLoadingEnd();
+      console.log(TAG, "SUCCESS: recarregando para a proxima fase (progresso persistido)");
+      setTimeout(function () { try { location.reload(); } catch (e) {} }, 250);
+    } catch (e) { console.warn(TAG, "advance err", e); location.reload(); }
   }
 
   var BLOCK_POPUPS = { COIN_PIG: 1, GROWUP: 1 };
