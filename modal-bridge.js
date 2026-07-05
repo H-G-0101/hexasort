@@ -487,15 +487,37 @@
       return out;
     } catch (e) { return null; }
   }
+  function findGameplayComp() { // controller com initLevel/success/upgrade (troca de fase suave)
+    try {
+      var scene=cc.director.getScene(), out=null;
+      (function w(n){ if(out||!n) return; var cs=n._components||[];
+        for(var i=0;i<cs.length;i++){ var c=cs[i];
+          if(c && typeof c.initLevel==="function" && typeof c.success==="function" && typeof c.upgrade==="function"){ out=c; return; } }
+        (n.children||[]).forEach(w); })(scene);
+      return out;
+    } catch (e) { return null; }
+  }
+
   function advanceToNextLevel() {
-    // Storage agora PERSISTE (sdk.js). O jogo ja fez levels.order+=1 e salvou
-    // antes do SUCCESS. Um reload reexecuta o boot -> le o progresso salvo ->
-    // monta a proxima fase pelo caminho que comprovadamente funciona.
+    // Caminho NATIVO suave (branch else do success): o jogo ja incrementou order.
+    // Chamamos upgrade() -> initLevel() do controller: toca as setas e remonta o
+    // board na MESMA cena, sem loader e sem reload.
     try {
       forceLoadingEnd();
-      console.log(TAG, "SUCCESS: recarregando para a proxima fase (progresso persistido)");
-      setTimeout(function () { try { location.reload(); } catch (e) {} }, 250);
-    } catch (e) { console.warn(TAG, "advance err", e); location.reload(); }
+      var gp = findGameplayComp();
+      if (gp && gp.initLevel) {
+        if (gp.upgrade) {
+          try { gp.upgrade(function () { gp.initLevel(); }); }
+          catch (e) { gp.initLevel(); }
+        } else { gp.initLevel(); }
+        console.log(TAG, "SUCCESS -> upgrade()+initLevel() (transicao nativa)");
+        setTimeout(forceLoadingEnd, 500);
+        setTimeout(forceLoadingEnd, 1200);
+      } else {
+        console.warn(TAG, "gameplay comp nao encontrado");
+        forceLoadingEnd();
+      }
+    } catch (e) { console.warn(TAG, "advance err", e); forceLoadingEnd(); }
   }
 
   var BLOCK_POPUPS = { COIN_PIG: 1, GROWUP: 1 };
