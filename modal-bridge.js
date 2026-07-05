@@ -467,6 +467,35 @@
   /* ============ suprimir popups que travam o loader (assets ausentes) ============ */
   // Popups bloqueados: abrem prefab sob demanda que nao existe na reconstrucao,
   // travando o loader em 99%. Bloqueando, o fluxo segue direto pra fase.
+  /* ============ bypass SUCCESS ausente: pula a tela de vitoria ============ */
+  function forceLoadingEnd() {
+    try {
+      var ld = cc.find && cc.find("Canvas/loading");
+      if (ld) ld.active = false;
+      (function w(n){ var cs=n._components||[];
+        for(var i=0;i<cs.length;i++){var k=cs[i]&&cs[i].constructor; if(k&&("isShow" in k)) k.isShow=false;}
+        (n.children||[]).forEach(w); })(cc.director.getScene());
+    } catch (e) {}
+  }
+  function findLevelMgr() { // componente com showLevel (remonta a fase a partir do save)
+    try {
+      var scene=cc.director.getScene(), out=null;
+      (function w(n){ if(out||!n) return; var cs=n._components||[];
+        for(var i=0;i<cs.length;i++) if(cs[i]&&typeof cs[i].showLevel==="function"){out=cs[i];return;}
+        (n.children||[]).forEach(w); })(scene);
+      return out;
+    } catch (e) { return null; }
+  }
+  function advanceToNextLevel() {
+    // o jogo JA fez levels.order+=1 e salvou antes do SUCCESS; so precisamos remontar o board
+    try {
+      var mgr = findLevelMgr();
+      if (mgr && mgr.showLevel) { mgr.showLevel(); console.log(TAG, "SUCCESS pulado -> proxima fase"); }
+      setTimeout(forceLoadingEnd, 300);   // garante o loader fechado apos remontar
+      setTimeout(forceLoadingEnd, 900);
+    } catch (e) { console.warn(TAG, "advance err", e); forceLoadingEnd(); }
+  }
+
   var BLOCK_POPUPS = { COIN_PIG: 1, GROWUP: 1 };
   var popupHooked = false;
   function hookPopup() {
@@ -489,8 +518,14 @@
       if (proto._mbHooked) { popupHooked = true; return; }
       var orig = proto.show;
       proto.show = function(name, data){
+        if (name === "SUCCESS") {                  // tela de vitoria ausente -> pula direto
+          console.log(TAG, "SUCCESS ausente -> avancando de fase");
+          advanceToNextLevel();
+          return Promise.resolve();
+        }
         if (BLOCK_POPUPS[name]) {
           console.log(TAG, "popup bloqueado:", name, "(asset ausente) -> seguindo fluxo");
+          forceLoadingEnd();
           return Promise.resolve();
         }
         return orig.apply(this, arguments);
@@ -503,22 +538,36 @@
 
   /* ============ watchdog: loading travado em 99% (asset de fase ausente) ============ */
   var loadingSince = 0;
+  function findLoadingMainClass() { // classe estatica LoadingMain (tem .end() e .isShow)
+    try {
+      var ld = cc.find && cc.find("Canvas/loading");
+      var comp = ld && ld._components && ld._components[0];
+      // o botao/loader nativo guarda ref; melhor: procurar por qualquer classe com end+isShow
+    } catch (e) {}
+    return null;
+  }
   function loadingWatchdog() {
     try {
       var ld = cc.find && cc.find("Canvas/loading");
       if (ld && ld.activeInHierarchy) {
         if (!loadingSince) loadingSince = Date.now();
-        else if (Date.now() - loadingSince > 8000) {
-          console.warn(TAG, "loading travado >8s (asset de fase ausente na captura); pulando");
-          try { ld.active = false; } catch (e) {}
-          try { // reseta o flag estatico p/ proximos loadings funcionarem
-            var cs = ld._components || [];
-            for (var i = 0; i < cs.length; i++)
-              if (cs[i] && cs[i].constructor && "isShow" in cs[i].constructor) cs[i].constructor.isShow = false;
+        else if (Date.now() - loadingSince > 6000) {
+          console.warn(TAG, "loader travado >6s em 99% (asset de transicao ausente); forcando fim");
+          // 1) tenta o end() oficial: a classe LoadingMain e estatica no componente 'loading'
+          try {
+            var comp = ld.getComponent && ld.getComponent(cc.Component);
+            var cls = comp && comp.constructor;
+            // varre modulos conhecidos: acha qualquer classe com isShow+end
           } catch (e) {}
-          try { // volta pro menu pelo fluxo nativo (Home)
-            var g = findGameComp();
-            if (g && g.btnHome) fireBtn(g.btnHome);
+          // 2) fallback direto: esconde o node e zera o flag estatico via qualquer componente que o tenha
+          try { ld.active = false; } catch (e) {}
+          try {
+            (function w(n){
+              var cs=n._components||[];
+              for(var i=0;i<cs.length;i++){var k=cs[i]&&cs[i].constructor;
+                if(k && ("isShow" in k)){ k.isShow=false; }}
+              (n.children||[]).forEach(w);
+            })(cc.director.getScene());
           } catch (e) {}
           loadingSince = 0;
         }
