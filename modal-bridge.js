@@ -498,6 +498,50 @@
     } catch (e) { return null; }
   }
 
+  /* ============ progressao de ESTAGIO UNICO (fase 1 -> fase 2 direto) ============ */
+  function getUser() {
+    try {
+      var req = window.__require;
+      if (!req) return null;
+      var names = ["User","framework/User","./framework/User","../../framework/User"];
+      for (var i=0;i<names.length;i++){
+        try { var m=req(names[i]); if(m && m.user && typeof m.user.get==="function") return m.user; } catch(e){}
+      }
+    } catch (e) {}
+    return null;
+  }
+  var successHooked = false, lastGp = null;
+  function hookSingleStage() {
+    if (successHooked) return;
+    var gp = findGameplayComp();
+    if (!gp || typeof gp.success !== "function") return;
+    if (gp !== lastGp) { successHooked = false; lastGp = gp; }
+    if (gp._mbSingle) { successHooked = true; return; }
+    var origSuccess = gp.success.bind(gp);
+    gp.success = function () {
+      try {
+        var user = getUser();
+        if (!user) { console.warn(TAG,"User nao encontrado; usando success nativo"); return origSuccess(); }
+        var lv = user.get("levels") || {};
+        lv.order = (lv.order|0) + 1;   // avanca 1 fase
+        lv.isD = false;                // sempre estagio unico (guide)
+        lv.pid = null;                 // nova pagina
+        lv.map = null; lv.dev = null; lv.block = 0;
+        user.set("levels", lv);
+        console.log(TAG, "estagio unico: fase ->", lv.order+1);
+        var self = this;
+        forceLoadingEnd();
+        if (this.upgrade) { try { this.upgrade(function(){ self.initLevel(); }); } catch(e){ this.initLevel(); } }
+        else this.initLevel();
+        setTimeout(forceLoadingEnd, 500);
+        setTimeout(forceLoadingEnd, 1400);
+      } catch (e) { console.warn(TAG,"success hook err",e); try{origSuccess();}catch(_){} }
+    };
+    gp._mbSingle = true;
+    successHooked = true;
+    console.log(TAG, "success() hookado -> progressao de estagio unico");
+  }
+
   function advanceToNextLevel() {
     // Caminho NATIVO suave (branch else do success): o jogo ja incrementou order.
     // Chamamos upgrade() -> initLevel() do controller: toca as setas e remonta o
@@ -575,24 +619,16 @@
       var ld = cc.find && cc.find("Canvas/loading");
       if (ld && ld.activeInHierarchy) {
         if (!loadingSince) loadingSince = Date.now();
-        else if (Date.now() - loadingSince > 6000) {
-          console.warn(TAG, "loader travado >6s em 99% (asset de transicao ausente); forcando fim");
-          // 1) tenta o end() oficial: a classe LoadingMain e estatica no componente 'loading'
+        else if (Date.now() - loadingSince > 3500) {
+          console.warn(TAG, "loader travado >3.5s; auto-recuperando");
+          forceLoadingEnd();
+          // tenta remontar o board pelo caminho nativo (estagio atual)
           try {
-            var comp = ld.getComponent && ld.getComponent(cc.Component);
-            var cls = comp && comp.constructor;
-            // varre modulos conhecidos: acha qualquer classe com isShow+end
+            var gp = findGameplayComp();
+            if (gp && gp.initLevel) gp.initLevel();
           } catch (e) {}
-          // 2) fallback direto: esconde o node e zera o flag estatico via qualquer componente que o tenha
-          try { ld.active = false; } catch (e) {}
-          try {
-            (function w(n){
-              var cs=n._components||[];
-              for(var i=0;i<cs.length;i++){var k=cs[i]&&cs[i].constructor;
-                if(k && ("isShow" in k)){ k.isShow=false; }}
-              (n.children||[]).forEach(w);
-            })(cc.director.getScene());
-          } catch (e) {}
+          setTimeout(forceLoadingEnd, 400);
+          setTimeout(forceLoadingEnd, 1000);
           loadingSince = 0;
         }
       } else loadingSince = 0;
@@ -876,6 +912,7 @@
       updatePill(scene);
       purgeTouchOrphans();
       hookPopup();
+      hookSingleStage();
       loadingWatchdog();
       // dispara o preload ~2.5s depois do jogo subir (nao concorre com o boot)
       if (!bootSeenAt) bootSeenAt = Date.now();
