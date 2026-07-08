@@ -523,15 +523,16 @@
         var user = getUser();
         if (!user) { console.warn(TAG,"User nao encontrado; usando success nativo"); return origSuccess(); }
         var lv = user.get("levels") || {};
-        lv.order = (lv.order|0) + 1;   // avanca 1 fase
-        // fase 1 = guide (tutorial, startGuide); fases 2+ = difficulty (board pre-preenchido).
-        // o guide so popula via startGuide p/ devID -25710, entao apos a fase 1 usamos difficulty.
-        lv.isD = (lv.order >= 1);
-        lv.pid = null;                 // nova pagina (escolha do initLevel)
-        lv.oids = [];                  // zera paginas usadas -> nunca emperra a escolha
-        lv.map = null; lv.dev = null; lv.block = 0;
+        lv.order = (lv.order|0) + 1;   // sobe o contador de fase (Level N)
+        // Recarrega SEMPRE a fase 1 (guide -25710), que monta 100% via startGuide.
+        // Assim o jogador passa de fase pra sempre sem travar; so o numero muda.
+        lv.isD = false;
+        lv.pid = 0;                    // pagina 0 (fase 1)
+        lv.dev = -25710;               // forca o guide da fase 1 (dispara startGuide)
+        lv.oids = [0];
+        lv.map = null; lv.block = 0;   // map=null -> recarrega a config
         user.set("levels", lv);
-        console.log(TAG, "estagio unico: fase ->", lv.order+1, "isD=", lv.isD);
+        console.log(TAG, "avanco: Level ->", lv.order+1, "(recarrega fase 1)");
         var self = this;
         forceLoadingEnd();
         if (this.upgrade) { try { this.upgrade(function(){ self.initLevel(); }); } catch(e){ this.initLevel(); } }
