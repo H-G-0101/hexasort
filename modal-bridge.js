@@ -525,7 +525,8 @@
         var lv = user.get("levels") || {};
         lv.order = (lv.order|0) + 1;   // avanca 1 fase
         lv.isD = false;                // sempre estagio unico (guide)
-        lv.pid = null;                 // nova pagina
+        lv.pid = null;                 // nova pagina (escolha do initLevel)
+        lv.oids = [];                  // zera paginas usadas -> nunca emperra a escolha
         lv.map = null; lv.dev = null; lv.block = 0;
         user.set("levels", lv);
         console.log(TAG, "estagio unico: fase ->", lv.order+1);
