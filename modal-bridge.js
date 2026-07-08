@@ -524,12 +524,14 @@
         if (!user) { console.warn(TAG,"User nao encontrado; usando success nativo"); return origSuccess(); }
         var lv = user.get("levels") || {};
         lv.order = (lv.order|0) + 1;   // avanca 1 fase
-        lv.isD = false;                // sempre estagio unico (guide)
+        // fase 1 = guide (tutorial, startGuide); fases 2+ = difficulty (board pre-preenchido).
+        // o guide so popula via startGuide p/ devID -25710, entao apos a fase 1 usamos difficulty.
+        lv.isD = (lv.order >= 1);
         lv.pid = null;                 // nova pagina (escolha do initLevel)
         lv.oids = [];                  // zera paginas usadas -> nunca emperra a escolha
         lv.map = null; lv.dev = null; lv.block = 0;
         user.set("levels", lv);
-        console.log(TAG, "estagio unico: fase ->", lv.order+1);
+        console.log(TAG, "estagio unico: fase ->", lv.order+1, "isD=", lv.isD);
         var self = this;
         forceLoadingEnd();
         if (this.upgrade) { try { this.upgrade(function(){ self.initLevel(); }); } catch(e){ this.initLevel(); } }
